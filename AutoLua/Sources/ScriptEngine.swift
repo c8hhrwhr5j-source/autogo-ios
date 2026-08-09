@@ -193,11 +193,7 @@ private func l_sleep(_ L: OpaquePointer?) -> Int32 {
     Thread.sleep(forTimeInterval: Double(ms) / 1000.0)
     return 0
 }
-private func l_ocr(_ L: OpaquePointer?) -> Int32 {
-    let text = OCREngine.shared.recognizeSync() ?? ""
-    lua_pushstring(L, text)
-    return 1
-}
+
 
 // MARK: - 辅助函数
 
@@ -287,7 +283,6 @@ final class ScriptEngine {
 
         // ── 工具 ──
         regFn(L, "sleep",      unsafeBitCast(l_sleep, to: lua_CFunction.self))
-        regFn(L, "ocr",        unsafeBitCast(l_ocr, to: lua_CFunction.self))
 
         // 注册为全局表
         lua_setglobal(L, "autolua")

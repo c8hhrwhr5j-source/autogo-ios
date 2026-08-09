@@ -70,15 +70,13 @@ class ShellService {
             return
         } else if cmd.hasPrefix("lua:") {
             result = scriptEngine.runLua(String(cmd.dropFirst(4)))
-        } else if cmd.hasPrefix("ocr") {
-            result = OCREngine.shared.recognizeSync() ?? "OCR failed"
         } else if cmd.hasPrefix("capture") {
             if let img = ScreenCapture.shared.captureImage(),
                let d = img.jpegData(compressionQuality: 0.7) {
                 result = d.base64EncodedString()
             } else { result = "Capture failed" }
         } else if cmd == "help" {
-            result = "lua:<code> ocr capture info exit"
+            result = "lua:<code> capture info exit"
         } else if cmd == "info" {
             let dev = UIDevice.current
             result = "Model: \(dev.model)\nSystem: \(dev.systemName) \(dev.systemVersion)\nName: \(dev.name)"
