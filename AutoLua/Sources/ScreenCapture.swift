@@ -23,8 +23,16 @@ final class ScreenCapture {
     private var _cachedBytesPerRow: Int = 0
     private var _frameValid: Bool = false
 
-    var width: Int { frameLock.withLock { _cachedWidth } }
-    var height: Int { frameLock.withLock { _cachedHeight } }
+    var width: Int  {
+        let size = UIScreen.main.bounds.size
+        let scale = UIScreen.main.scale
+        return Int(size.width * scale)
+    }
+    var height: Int {
+        let size = UIScreen.main.bounds.size
+        let scale = UIScreen.main.scale
+        return Int(size.height * scale)
+    }
 
     // MARK: - 启动 / 停止流式捕获
 
