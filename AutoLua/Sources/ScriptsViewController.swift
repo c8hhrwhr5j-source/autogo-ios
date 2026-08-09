@@ -13,8 +13,7 @@ final class ScriptsViewController: UIViewController {
     // MARK: - Data
 
     private let scriptsDir: URL = {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let dir = docs.appendingPathComponent("Scripts")
+        let dir = URL(fileURLWithPath: "/var/mobile/AutoLua/Scripts")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)
         return dir
     }()
@@ -67,7 +66,7 @@ final class ScriptsViewController: UIViewController {
         view.addSubview(tableView)
 
         // Empty label
-        emptyLabel.text = "暂无脚本文件\n\n将 .lua 文件放入\n文件 App → 我的 iPhone → AutoLua/Scripts"
+        emptyLabel.text = "暂无脚本文件\n\n将 .lua 文件放入\n/var/mobile/AutoLua/Scripts/"
         emptyLabel.textColor = .systemGray
         emptyLabel.font = .systemFont(ofSize: 13)
         emptyLabel.numberOfLines = 0

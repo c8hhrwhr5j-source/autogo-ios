@@ -10,8 +10,7 @@ final class LogManager {
     private let writeQueue = DispatchQueue(label: "autolua.log", qos: .utility)
 
     private init() {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        logDir = docs.appendingPathComponent("Logs")
+        logDir = URL(fileURLWithPath: "/var/mobile/AutoLua/log")
         try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true, attributes: nil)
 
         dateFormatter = DateFormatter()
