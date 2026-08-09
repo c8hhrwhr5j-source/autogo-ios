@@ -9,8 +9,12 @@
 #import <UIKit/UIKit.h>
 #import <dlfcn.h>
 #import <mach/mach_time.h>
-#import <IOSurface/IOSurface.h>
+#import <mach/kern_return.h>
 #import <CoreGraphics/CoreGraphics.h>
+
+// IOSurface 私有框架 — 类型前向声明 + 动态加载
+typedef CFTypeRef IOSurfaceRef;
+#define kIOSurfaceLockReadOnly 0x00000001
 
 // ============================================================
 // IOKit HID 事件实现
@@ -98,9 +102,31 @@ typedef struct __IOMobileFramebuffer *IOMobileFramebufferConnection;
 static int (*IOMobileFramebufferGetMainDisplay)(IOMobileFramebufferConnection *connect) = NULL;
 static int (*IOMobileFramebufferGetSurface)(IOMobileFramebufferConnection connect, int surfaceID, IOSurfaceRef *surface) = NULL;
 
+// IOSurface 私有框架函数指针（动态加载）
+static kern_return_t (*IOSurfaceLockFunc)(IOSurfaceRef, uint32_t, uint32_t *) = NULL;
+static kern_return_t (*IOSurfaceUnlockFunc)(IOSurfaceRef, uint32_t, uint32_t *) = NULL;
+static size_t (*IOSurfaceGetWidthFunc)(IOSurfaceRef) = NULL;
+static size_t (*IOSurfaceGetHeightFunc)(IOSurfaceRef) = NULL;
+static size_t (*IOSurfaceGetBytesPerRowFunc)(IOSurfaceRef) = NULL;
+static uint32_t (*IOSurfaceGetPixelFormatFunc)(IOSurfaceRef) = NULL;
+static void *(*IOSurfaceGetBaseAddressFunc)(IOSurfaceRef) = NULL;
+
 static void loadIOMobileFramebuffer(void) {
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
+        // 加载 IOSurface 私有框架
+        void *iosHandle = dlopen("/System/Library/Frameworks/IOSurface.framework/IOSurface", RTLD_LAZY);
+        if (iosHandle) {
+            IOSurfaceLockFunc = dlsym(iosHandle, "IOSurfaceLock");
+            IOSurfaceUnlockFunc = dlsym(iosHandle, "IOSurfaceUnlock");
+            IOSurfaceGetWidthFunc = dlsym(iosHandle, "IOSurfaceGetWidth");
+            IOSurfaceGetHeightFunc = dlsym(iosHandle, "IOSurfaceGetHeight");
+            IOSurfaceGetBytesPerRowFunc = dlsym(iosHandle, "IOSurfaceGetBytesPerRow");
+            IOSurfaceGetPixelFormatFunc = dlsym(iosHandle, "IOSurfaceGetPixelFormat");
+            IOSurfaceGetBaseAddressFunc = dlsym(iosHandle, "IOSurfaceGetBaseAddress");
+        }
+
+        // 加载 IOMobileFramebuffer 私有框架
         void *handle = dlopen("/System/Library/PrivateFrameworks/IOMobileFramebuffer.framework/IOMobileFramebuffer", RTLD_LAZY);
         if (handle) {
             IOMobileFramebufferGetMainDisplay = dlsym(handle, "IOMobileFramebufferGetMainDisplay");
@@ -144,16 +170,16 @@ CGImageRef AutoLuaCreateImageFromSurface(IOSurfaceRef surface) {
     if (!surface) return NULL;
 
     // 锁定 Surface 以读取
-    IOSurfaceLock(surface, kIOSurfaceLockReadOnly, NULL);
+    if (IOSurfaceLockFunc) IOSurfaceLockFunc(surface, kIOSurfaceLockReadOnly, NULL);
 
-    size_t width = IOSurfaceGetWidth(surface);
-    size_t height = IOSurfaceGetHeight(surface);
-    size_t bytesPerRow = IOSurfaceGetBytesPerRow(surface);
-    uint32_t pixelFormat = IOSurfaceGetPixelFormat(surface);
-    void *baseAddress = IOSurfaceGetBaseAddress(surface);
+    size_t width = IOSurfaceGetWidthFunc ? IOSurfaceGetWidthFunc(surface) : 0;
+    size_t height = IOSurfaceGetHeightFunc ? IOSurfaceGetHeightFunc(surface) : 0;
+    size_t bytesPerRow = IOSurfaceGetBytesPerRowFunc ? IOSurfaceGetBytesPerRowFunc(surface) : 0;
+    uint32_t pixelFormat = IOSurfaceGetPixelFormatFunc ? IOSurfaceGetPixelFormatFunc(surface) : 0;
+    void *baseAddress = IOSurfaceGetBaseAddressFunc ? IOSurfaceGetBaseAddressFunc(surface) : NULL;
 
     if (!baseAddress) {
-        IOSurfaceUnlock(surface, kIOSurfaceLockReadOnly, NULL);
+        if (IOSurfaceUnlockFunc) IOSurfaceUnlockFunc(surface, kIOSurfaceLockReadOnly, NULL);
         return NULL;
     }
 
@@ -174,13 +200,13 @@ CGImageRef AutoLuaCreateImageFromSurface(IOSurfaceRef surface) {
     CGColorSpaceRelease(colorSpace);
 
     if (!context) {
-        IOSurfaceUnlock(surface, kIOSurfaceLockReadOnly, NULL);
+        if (IOSurfaceUnlockFunc) IOSurfaceUnlockFunc(surface, kIOSurfaceLockReadOnly, NULL);
         return NULL;
     }
 
     CGImageRef image = CGBitmapContextCreateImage(context);
     CGContextRelease(context);
-    IOSurfaceUnlock(surface, kIOSurfaceLockReadOnly, NULL);
+    if (IOSurfaceUnlockFunc) IOSurfaceUnlockFunc(surface, kIOSurfaceLockReadOnly, NULL);
 
     return image;
 }
@@ -188,24 +214,24 @@ CGImageRef AutoLuaCreateImageFromSurface(IOSurfaceRef surface) {
 NSData* AutoLuaGetPixelData(IOSurfaceRef surface, CGRect rect) {
     if (!surface) return nil;
 
-    IOSurfaceLock(surface, kIOSurfaceLockReadOnly, NULL);
+    if (IOSurfaceLockFunc) IOSurfaceLockFunc(surface, kIOSurfaceLockReadOnly, NULL);
 
-    size_t width = IOSurfaceGetWidth(surface);
-    size_t bytesPerRow = IOSurfaceGetBytesPerRow(surface);
-    void *base = IOSurfaceGetBaseAddress(surface);
+    size_t width = IOSurfaceGetWidthFunc ? IOSurfaceGetWidthFunc(surface) : 0;
+    size_t bytesPerRow = IOSurfaceGetBytesPerRowFunc ? IOSurfaceGetBytesPerRowFunc(surface) : 0;
+    void *base = IOSurfaceGetBaseAddressFunc ? IOSurfaceGetBaseAddressFunc(surface) : NULL;
 
     if (!base) {
-        IOSurfaceUnlock(surface, kIOSurfaceLockReadOnly, NULL);
+        if (IOSurfaceUnlockFunc) IOSurfaceUnlockFunc(surface, kIOSurfaceLockReadOnly, NULL);
         return nil;
     }
 
     int x = MAX(0, (int)rect.origin.x);
     int y = MAX(0, (int)rect.origin.y);
     int w = MIN((int)width - x, (int)rect.size.width);
-    int h = MIN((int)IOSurfaceGetHeight(surface) - y, (int)rect.size.height);
+    int h = MIN((int)(IOSurfaceGetHeightFunc ? IOSurfaceGetHeightFunc(surface) : 0) - y, (int)rect.size.height);
 
     if (w <= 0 || h <= 0) {
-        IOSurfaceUnlock(surface, kIOSurfaceLockReadOnly, NULL);
+        if (IOSurfaceUnlockFunc) IOSurfaceUnlockFunc(surface, kIOSurfaceLockReadOnly, NULL);
         return nil;
     }
 
@@ -217,7 +243,7 @@ NSData* AutoLuaGetPixelData(IOSurfaceRef surface, CGRect rect) {
         memcpy(dst + row * w * 4, src + (y + row) * bytesPerRow + x * 4, w * 4);
     }
 
-    IOSurfaceUnlock(surface, kIOSurfaceLockReadOnly, NULL);
+    if (IOSurfaceUnlockFunc) IOSurfaceUnlockFunc(surface, kIOSurfaceLockReadOnly, NULL);
     return data;
 }
 
