@@ -37,3 +37,7 @@ Pods/
 .idea/
 .vscode/
 *.sublime-workspace
+
+# Extracted IPA (analysis only)
+ipa_extract/
+app-release.zip

@@ -1,4 +1,4 @@
-import Foundation
+import UIKit
 import Network
 
 class ShellService {
@@ -11,136 +11,87 @@ class ShellService {
         do {
             let params = NWParameters.tcp
             params.allowLocalEndpointReuse = true
-
             listener = try NWListener(using: params, on: NWEndpoint.Port(rawValue: port)!)
             listener?.stateUpdateHandler = { [weak self] state in
+                guard let self else { return }
                 switch state {
                 case .ready:
-                    print("ShellService listening on port \(self?.port ?? 0)")
+                    print("AutoGo listening on port \(self.port)")
                 case .failed(let error):
-                    print("ShellService failed: \(error)")
-                default:
-                    break
+                    print("Listener failed: \(error)")
+                default: break
                 }
             }
-            listener?.newConnectionHandler = { [weak self] connection in
-                self?.handleConnection(connection)
+            listener?.newConnectionHandler = { [weak self] conn in
+                self?.handleConnection(conn)
             }
             listener?.start(queue: .global(qos: .background))
         } catch {
-            print("ShellService start error: \(error)")
+            print("Start error: \(error)")
         }
     }
 
     func stop() {
         listener?.cancel()
-        for conn in connections {
-            conn.cancel()
-        }
+        connections.forEach { $0.cancel() }
         connections.removeAll()
     }
 
-    private func handleConnection(_ connection: NWConnection) {
-        connections.append(connection)
-        connection.stateUpdateHandler = { [weak self] state in
+    private func handleConnection(_ conn: NWConnection) {
+        connections.append(conn)
+        conn.stateUpdateHandler = { [weak self] state in
             switch state {
             case .ready:
-                self?.receiveData(from: connection)
+                self?.receive(from: conn)
             case .failed, .cancelled:
-                if let idx = self?.connections.firstIndex(where: { $0 === connection }) {
-                    self?.connections.remove(at: idx)
-                }
-            default:
-                break
+                self?.connections.removeAll(where: { $0 === conn })
+            default: break
             }
         }
-        connection.start(queue: .global(qos: .background))
+        conn.start(queue: .global(qos: .background))
     }
 
-    private func receiveData(from connection: NWConnection) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, _, error in
-            if let error = error {
-                print("Receive error: \(error)")
-                return
+    private func receive(from conn: NWConnection) {
+        conn.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, _, error in
+            if error != nil { return }
+            if let d = data, let cmd = String(data: d, encoding: .utf8) {
+                self?.execute(cmd.trimmingCharacters(in: .whitespacesAndNewlines), conn: conn)
             }
-            if let data = data, let command = String(data: data, encoding: .utf8) {
-                self?.executeCommand(command.trimmingCharacters(in: .whitespacesAndNewlines), connection: connection)
-            }
-            if connection.state == .ready {
-                self?.receiveData(from: connection)
-            }
+            if conn.state == .ready { self?.receive(from: conn) }
         }
     }
 
-    private func executeCommand(_ cmd: String, connection: NWConnection) {
-        var result = ""
+    private func execute(_ cmd: String, conn: NWConnection) {
+        var result: String
 
-        switch {
-        case cmd == "exit":
-            sendResponse("Bye", connection: connection)
-            connection.cancel()
+        if cmd == "exit" {
+            send("Bye\n", conn: conn)
+            conn.cancel()
             return
-
-        case cmd.hasPrefix("lua:"):
-            let script = String(cmd.dropFirst(4))
-            result = scriptEngine.runLua(script)
-
-        case cmd.hasPrefix("js:"):
-            let script = String(cmd.dropFirst(3))
-            result = scriptEngine.runJS(script)
-
-        case cmd.hasPrefix("ocr"):
-            result = performOCR()
-
-        case cmd.hasPrefix("capture"):
-            result = captureScreen()
-
-        case cmd == "help":
-            result = """
-            AutoGo Shell Commands:
-              lua:<script>  - Run Lua script
-              js:<script>   - Run JavaScript
-              ocr           - OCR screen content
-              capture       - Take screenshot (base64)
-              info          - Device information
-              exit          - Close connection
-            """
-
-        case cmd == "info":
-            let device = UIDevice.current
-            result = """
-            Model: \(device.model)
-            System: \(device.systemName) \(device.systemVersion)
-            Name: \(device.name)
-            """
-
-        default:
-            result = "Unknown command: \(cmd)\nType 'help' for available commands."
+        } else if cmd.hasPrefix("lua:") {
+            result = scriptEngine.runLua(String(cmd.dropFirst(4)))
+        } else if cmd.hasPrefix("js:") {
+            result = scriptEngine.runJS(String(cmd.dropFirst(3)))
+        } else if cmd.hasPrefix("ocr") {
+            result = OCREngine.shared.recognizeSync() ?? "OCR failed"
+        } else if cmd.hasPrefix("capture") {
+            if let img = ScreenCapture.shared.capture(),
+               let d = img.jpegData(compressionQuality: 0.7) {
+                result = d.base64EncodedString()
+            } else { result = "Capture failed" }
+        } else if cmd == "help" {
+            result = "lua:<s> js:<s> ocr capture info exit"
+        } else if cmd == "info" {
+            let dev = UIDevice.current
+            result = "Model: \(dev.model)\nSystem: \(dev.systemName) \(dev.systemVersion)\nName: \(dev.name)"
+        } else {
+            result = "Unknown: \(cmd)\nType help"
         }
-
-        sendResponse(result + "\n", connection: connection)
+        send(result + "\n", conn: conn)
     }
 
-    private func sendResponse(_ text: String, connection: NWConnection) {
-        guard let data = text.data(using: .utf8) else { return }
-        connection.send(content: data, completion: .contentProcessed({ _ in }))
-    }
-
-    // MARK: - Actions
-
-    private func performOCR() -> String {
-        return OCREngine.shared.recognizeSync() ?? "OCR failed or no text found"
-    }
-
-    private func captureScreen() -> String {
-        guard let image = ScreenCapture.shared.capture() else {
-            return "Capture failed"
-        }
-        guard let data = image.jpegData(compressionQuality: 0.7) else {
-            return "Encode failed"
-        }
-        return data.base64EncodedString()
+    private func send(_ text: String, conn: NWConnection) {
+        guard let d = text.data(using: .utf8) else { return }
+        conn.send(content: d, completion: .contentProcessed({ _ in }))
     }
 }
-
-import UIKit

@@ -29,6 +29,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         setupBackgroundAudio()
         startShellService()
 
+        // 启动流式截图 (AutoGo 同款：后台持续捕获，脚本零延迟取帧)
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
+            ScreenCapture.shared.startStreaming(fps: 20)
+        }
+
         return true
     }
 
@@ -117,6 +122,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
+        ScreenCapture.shared.stopStreaming()
         shellService?.stop()
     }
 }

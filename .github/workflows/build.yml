@@ -27,30 +27,38 @@ jobs:
 
       - name: Build
         run: |
-          xcodebuild \
+          xcodebuild build \
             -project AutoGo.xcodeproj \
             -scheme AutoGo \
             -configuration Release \
+            -sdk iphoneos \
             -derivedDataPath build/DerivedData \
-            -destination 'generic/platform=iOS' \
-            -archivePath build/AutoGo.xcarchive \
-            archive \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            AD_HOC_CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO
-
-      - name: Create IPA
-        run: |
-          mkdir -p build/output/Payload
-          cp -R build/AutoGo.xcarchive/Products/Applications/AutoGo.app build/output/Payload/
-          cd build/output
-          zip -qr AutoGo.ipa Payload
-          rm -rf Payload
 
       - name: Sign with ldid
         run: |
-          ldid -SAutoGo/Entitlements.entitlements build/AutoGo.xcarchive/Products/Applications/AutoGo.app/AutoGo
+          APP=$(find build/DerivedData/Build/Products/Release-iphoneos -name "AutoGo.app" -type d | head -1)
+          echo "App: $APP"
+          echo "Entitlements:"
+          cat "${GITHUB_WORKSPACE}/AutoGo/Entitlements.entitlements"
+          ldid -S"${GITHUB_WORKSPACE}/AutoGo/Entitlements.entitlements" "$APP/AutoGo"
+
+      - name: Create IPA
+        run: |
+          APP_DIR=$(find build/DerivedData/Build/Products/Release-iphoneos -name "AutoGo.app" -type d | head -1)
+          echo "Found app at: $APP_DIR"
+          mkdir -p build/output/Payload
+          cp -R "$APP_DIR" build/output/Payload/
+          cd build/output
+          zip -qr AutoGo.ipa Payload
+          rm -rf Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
