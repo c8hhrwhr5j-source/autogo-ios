@@ -31,7 +31,6 @@ targets:
       - sdk: Vision.framework
       - sdk: UIKit.framework
       - sdk: CoreGraphics.framework
-      - sdk: UIKit.framework
     preBuildScripts:
       - name: "Clean Build"
         script: |
