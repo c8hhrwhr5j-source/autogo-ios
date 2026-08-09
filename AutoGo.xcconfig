@@ -8,4 +8,4 @@ ENABLE_HARDENED_RUNTIME = NO
 VALID_ARCHS = arm64
 ARCHS = arm64
 ONLY_ACTIVE_ARCH = NO
-OTHER_LDFLAGS = -framework IOKit
+OTHER_LDFLAGS = -framework IOKit -Wl,-undefined,dynamic_lookup
