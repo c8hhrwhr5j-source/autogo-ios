@@ -33,11 +33,7 @@ final class TouchController {
     private let maskAttribute: UInt32 = 1 << 2  // 属性变化 (用于 ended)
 
     private let senderID: UInt64 = 0x8000000817310012
-    private let ioHIDEventConnection: AnyObject?
-
-    private init() {
-        ioHIDEventConnection = IOHIDEventSystemConnection()
-    }
+    private let ioHIDEventConnection: AnyObject? = TouchController.createEventConnection()
 
     // MARK: - 底层：单指事件
 
@@ -194,7 +190,7 @@ final class TouchController {
         return now * UInt64(info.numer) / UInt64(info.denom)  // → 纳秒
     }
 
-    private func IOHIDEventSystemConnection() -> AnyObject? {
+    private static func createEventConnection() -> AnyObject? {
         typealias IOHIDEventSystemClientCreate = @convention(c) (CFAllocator?) -> Unmanaged<AnyObject>?
         typealias IOHIDEventSystemClientDispatchEventQueueCreate = @convention(c) (CFAllocator?) -> Unmanaged<AnyObject>?
 
