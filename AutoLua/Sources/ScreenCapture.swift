@@ -37,16 +37,17 @@ final class ScreenCapture {
     // MARK: - 启动 / 停止流式捕获
 
     func startStreaming(fps: Int = 20) {
-        guard surface == nil else { return }
+        guard captureTimer == nil else { return }
 
-        // 通过 Bridge ObjC 获取主屏幕 IOSurface（内部会 dlopen 私有框架）
-        guard let surf = AutoLuaGetMainDisplaySurface()?.takeUnretainedValue() else {
-            LogManager.shared.error("[ScreenCapture] 无法获取屏幕 Surface（可能缺少权限）")
-            return
+        // 尝试私有 API（IOMobileFramebuffer → IOSurface）
+        if let surf = AutoLuaGetMainDisplaySurface()?.takeUnretainedValue() {
+            surface = surf
+            LogManager.shared.info("[ScreenCapture] 使用私有 API 获取屏幕 Surface")
+        } else {
+            LogManager.shared.info("[ScreenCapture] 私有 API 不可用，回退到公开 API (UIGraphicsImageRenderer)")
         }
-        surface = surf
 
-        // 首帧读取
+        // 首帧读取（私有/公开 API 内部自动判断）
         _ = captureRawFrame()
 
         // 启动定时器持续捕获
@@ -196,25 +197,75 @@ final class ScreenCapture {
 
     // MARK: - 内部实现
 
-    /// 通过 Bridge 的 AutoLuaGetPixelData 读取全屏像素
+    /// 通过 Bridge 的 AutoLuaGetPixelData 读取全屏像素（优先私有 API，失败回退到公开 API）
     @discardableResult
     private func captureRawFrame() -> Bool {
-        guard let surf = surface else { return false }
+        // 方案1：尝试私有 API（IOMobileFramebuffer → IOSurface）
+        if let surf = surface {
+            let w = AutoLuaSurfaceGetWidth(surf)
+            let h = AutoLuaSurfaceGetHeight(surf)
+            if w > 0, h > 0 {
+                let fullRect = CGRect(x: 0, y: 0, width: CGFloat(w), height: CGFloat(h))
+                if let pixelData = AutoLuaGetPixelData(surf, fullRect) as Data? {
+                    let pixels = [UInt8](pixelData)
+                    let bpr = Int(w) * 4
+                    frameLock.withLock {
+                        _cachedPixels = pixels
+                        _cachedWidth = Int(w)
+                        _cachedHeight = Int(h)
+                        _cachedBytesPerRow = bpr
+                        _frameValid = true
+                    }
+                    return true
+                }
+            }
+        }
 
-        let w = AutoLuaSurfaceGetWidth(surf)
-        let h = AutoLuaSurfaceGetHeight(surf)
+        // 方案2：回退到公开 API — UIGraphicsImageRenderer 截取窗口，再统一转 BGRA
+        guard let window = UIApplication.shared.windows.first else { return false }
+        let size = window.bounds.size
+        let scale = UIScreen.main.scale
+        let w = Int(size.width * scale)
+        let h = Int(size.height * scale)
         guard w > 0, h > 0 else { return false }
 
-        let fullRect = CGRect(x: 0, y: 0, width: CGFloat(w), height: CGFloat(h))
-        guard let pixelData = AutoLuaGetPixelData(surf, fullRect) as Data? else { return false }
+        let bpr = w * 4
+        var pixels: [UInt8] = []
+        var success = false
 
-        let pixels = [UInt8](pixelData)
-        let bpr = Int(w) * 4  // AutoLuaGetPixelData 输出 4 字节/像素 (BGRA)
+        DispatchQueue.main.sync {
+            let renderer = UIGraphicsImageRenderer(size: size)
+            let image = renderer.image { ctx in
+                window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+            }
+            guard let cgImage = image.cgImage else { return }
+
+            // 创建 BGRA 格式上下文，绘制 CGImage 进去，保证像素格式一致
+            let colorSpace = CGColorSpaceCreateDeviceRGB()
+            let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue)
+            guard let context = CGContext(
+                data: nil,
+                width: w,
+                height: h,
+                bitsPerComponent: 8,
+                bytesPerRow: bpr,
+                space: colorSpace,
+                bitmapInfo: bitmapInfo.rawValue
+            ) else { return }
+
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: w, height: h))
+            guard let raw = context.data?.assumingMemoryBound(to: UInt8.self) else { return }
+
+            pixels = Array(UnsafeBufferPointer(start: raw, count: w * h * 4))
+            success = true
+        }
+
+        guard success else { return false }
 
         frameLock.withLock {
             _cachedPixels = pixels
-            _cachedWidth = Int(w)
-            _cachedHeight = Int(h)
+            _cachedWidth = w
+            _cachedHeight = h
             _cachedBytesPerRow = bpr
             _frameValid = true
         }
