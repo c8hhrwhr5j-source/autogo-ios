@@ -95,67 +95,66 @@ private func l_findMultiColorsEx(_ L: OpaquePointer?) -> Int32 {
 
 // ── 触摸 (单指) ──
 private func l_tap(_ L: OpaquePointer?) -> Int32 {
-    let x = au_tonumber(L, 1), y = au_tonumber(L, 2)
+    let x = Int(au_tonumber(L, 1)), y = Int(au_tonumber(L, 2))
     let delay = lua_gettop(L) >= 3 ? Int(au_tointeger(L, 3)) : 30
-    TouchController.shared.tap(x: x, y: y, delayMs: delay)
+    TouchController.shared.tap(x: x, y: y)
+    if delay > 0 { Thread.sleep(forTimeInterval: Double(delay) / 1000.0) }
     return 0
 }
 private func l_longPress(_ L: OpaquePointer?) -> Int32 {
-    let x = au_tonumber(L, 1), y = au_tonumber(L, 2)
+    let x = Int(au_tonumber(L, 1)), y = Int(au_tonumber(L, 2))
     let dur = lua_gettop(L) >= 3 ? Int(au_tointeger(L, 3)) : 800
     TouchController.shared.longPress(x: x, y: y, durationMs: dur)
     return 0
 }
 private func l_swipe(_ L: OpaquePointer?) -> Int32 {
-    let fx = au_tonumber(L, 1), fy = au_tonumber(L, 2)
-    let tx = au_tonumber(L, 3), ty = au_tonumber(L, 4)
+    let fx = Int(au_tonumber(L, 1)), fy = Int(au_tonumber(L, 2))
+    let tx = Int(au_tonumber(L, 3)), ty = Int(au_tonumber(L, 4))
     let dur = lua_gettop(L) >= 5 ? Int(au_tointeger(L, 5)) : 300
-    let steps = lua_gettop(L) >= 6 ? Int(au_tointeger(L, 6)) : 30
-    TouchController.shared.swipe(fromX: fx, fromY: fy, toX: tx, toY: ty, durationMs: dur, steps: steps)
+    TouchController.shared.swipe(from: fx, fromY: fy, to: tx, toY: ty, durationMs: dur)
     return 0
 }
 
 // ── 触摸 (多点) ──
 private func l_touchDown(_ L: OpaquePointer?) -> Int32 {
-    let x = au_tonumber(L, 1), y = au_tonumber(L, 2)
+    let x = Int(au_tonumber(L, 1)), y = Int(au_tonumber(L, 2))
     let idx = lua_gettop(L) >= 3 ? UInt32(au_tointeger(L, 3)) : 0
     TouchController.shared.touchDown(x: x, y: y, fingerIndex: idx)
     return 0
 }
 private func l_touchUp(_ L: OpaquePointer?) -> Int32 {
-    let x = au_tonumber(L, 1), y = au_tonumber(L, 2)
+    let x = Int(au_tonumber(L, 1)), y = Int(au_tonumber(L, 2))
     let idx = lua_gettop(L) >= 3 ? UInt32(au_tointeger(L, 3)) : 0
     TouchController.shared.touchUp(x: x, y: y, fingerIndex: idx)
     return 0
 }
 private func l_touchMove(_ L: OpaquePointer?) -> Int32 {
-    let x = au_tonumber(L, 1), y = au_tonumber(L, 2)
+    let x = Int(au_tonumber(L, 1)), y = Int(au_tonumber(L, 2))
     let idx = lua_gettop(L) >= 3 ? UInt32(au_tointeger(L, 3)) : 0
     TouchController.shared.touchMove(x: x, y: y, fingerIndex: idx)
     return 0
 }
 private func l_multiTap(_ L: OpaquePointer?) -> Int32 {
-    var pts: [(Double, Double)] = []
+    var pts: [(x: Int, y: Int)] = []
     if au_istable(L, 1) != 0 {
         let n = au_objlen(L, 1)
         for i in 1...Int(n) {
             lua_rawgeti(L, 1, lua_Integer(i))
-            lua_getfield(L, -1, "x"); let x = au_tonumber(L, -1); au_pop(L, 1)
-            lua_getfield(L, -1, "y"); let y = au_tonumber(L, -1); au_pop(L, 1)
-            pts.append((x, y))
+            lua_getfield(L, -1, "x"); let x = Int(au_tonumber(L, -1)); au_pop(L, 1)
+            lua_getfield(L, -1, "y"); let y = Int(au_tonumber(L, -1)); au_pop(L, 1)
+            pts.append((x: x, y: y))
             au_pop(L, 1)
         }
     }
-    let delay = lua_gettop(L) >= 2 ? Int(au_tointeger(L, 2)) : 30
-    TouchController.shared.multiTap(pts, delayMs: delay)
+    TouchController.shared.multiTap(points: pts)
     return 0
 }
 private func l_pinch(_ L: OpaquePointer?) -> Int32 {
-    let cx = au_tonumber(L, 1), cy = au_tonumber(L, 2)
+    let cx = Int(au_tonumber(L, 1)), cy = Int(au_tonumber(L, 2))
     let fd = au_tonumber(L, 3), td = au_tonumber(L, 4)
     let dur = lua_gettop(L) >= 5 ? Int(au_tointeger(L, 5)) : 300
-    let steps = lua_gettop(L) >= 6 ? Int(au_tointeger(L, 6)) : 20
-    TouchController.shared.pinch(centerX: cx, centerY: cy, fromDistance: fd, toDistance: td, durationMs: dur, steps: steps)
+    let scale = Float(td / fd)
+    TouchController.shared.pinch(centerX: cx, centerY: cy, scale: scale, durationMs: dur)
     return 0
 }
 

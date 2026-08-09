@@ -8,7 +8,7 @@ final class TouchController {
     private var nextFingerID: Int32 = 1
 
     /// 通过 Bridge 创建 HID 事件客户端
-    private let hidClient: CFTypeRef = AutoLuaHIDEventSystemClientCreate()
+    private lazy var hidClient: CFTypeRef = AutoLuaHIDEventSystemClientCreate().takeRetainedValue()
 
     // MARK: - 点击
 
@@ -38,7 +38,24 @@ final class TouchController {
         postTouch(phase: kAutoLuaTouchPhaseEnded, x: Float(toX), y: Float(toY), fingerID: id)
     }
 
-    // MARK: - 多点触控
+    // MARK: - 多点触控原始操作
+
+    func touchDown(x: Int, y: Int, fingerIndex: UInt32 = 0) {
+        let id = Int32(fingerIndex) + 1
+        postTouch(phase: kAutoLuaTouchPhaseBegan, x: Float(x), y: Float(y), fingerID: id)
+    }
+
+    func touchUp(x: Int, y: Int, fingerIndex: UInt32 = 0) {
+        let id = Int32(fingerIndex) + 1
+        postTouch(phase: kAutoLuaTouchPhaseEnded, x: Float(x), y: Float(y), fingerID: id)
+    }
+
+    func touchMove(x: Int, y: Int, fingerIndex: UInt32 = 0) {
+        let id = Int32(fingerIndex) + 1
+        postTouch(phase: kAutoLuaTouchPhaseMoved, x: Float(x), y: Float(y), fingerID: id)
+    }
+
+    // MARK: - 多点触控组合
 
     func multiTap(points: [(x: Int, y: Int)]) {
         // 多点同时落下
@@ -98,7 +115,7 @@ final class TouchController {
             1.0,                                         // tipPressure
             0, 0, 0, 0, 0,                                // twist, range, quality, density, irregularity
             0                                            // majorRadius
-        ) else { return }
+        )?.takeRetainedValue() else { return }
 
         // 设置发送者 ID（关键：不设置则触控不会被识别）
         AutoLuaHIDEventSetInteger(event, 0x00010000, 0x0810)
