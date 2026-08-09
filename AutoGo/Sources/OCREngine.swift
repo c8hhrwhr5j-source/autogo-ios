@@ -6,7 +6,7 @@ class OCREngine {
     private init() {}
 
     func recognizeSync() -> String? {
-        guard let image = ScreenCapture.shared.capture() else { return nil }
+        guard let image = ScreenCapture.shared.captureImage() else { return nil }
         return recognize(image: image)
     }
 
@@ -41,7 +41,7 @@ class OCREngine {
         let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
         try? handler.perform([request])
 
-        semaphore.wait(timeout: .now() + 5.0)
+        _ = semaphore.wait(timeout: .now() + 5.0)
         return resultText
     }
 }

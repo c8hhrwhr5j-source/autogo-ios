@@ -186,7 +186,7 @@ final class ScriptEngine {
         ag?.setValue(makeFunc(ctx) { _, _ in OCREngine.shared.recognizeSync() ?? "" },
                      forProperty: "ocr")
 
-        ctx.setValue(ag, forProperty: "autogo")
+        ctx.setObject(ag, forKeyedSubscript: "autogo" as NSString)
     }
 
     // MARK: - 执行脚本

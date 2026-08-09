@@ -286,8 +286,8 @@ final class ScreenCapture {
     private func captureRawFrame() -> Bool {
         guard let surface = surface else { return false }
 
-        IOSurfaceLock(surface, 1, nil)
-        defer { IOSurfaceUnlock(surface, 1, nil) }
+        _ = IOSurfaceLock(surface, 1, nil)
+        defer { _ = IOSurfaceUnlock(surface, 1, nil) }
 
         guard let baseAddr = IOSurfaceGetBaseAddress(surface) else { return false }
         let w = IOSurfaceGetWidth(surface)

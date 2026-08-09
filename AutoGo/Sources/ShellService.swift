@@ -75,7 +75,7 @@ class ShellService {
         } else if cmd.hasPrefix("ocr") {
             result = OCREngine.shared.recognizeSync() ?? "OCR failed"
         } else if cmd.hasPrefix("capture") {
-            if let img = ScreenCapture.shared.capture(),
+            if let img = ScreenCapture.shared.captureImage(),
                let d = img.jpegData(compressionQuality: 0.7) {
                 result = d.base64EncodedString()
             } else { result = "Capture failed" }
