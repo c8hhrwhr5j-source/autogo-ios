@@ -22,34 +22,33 @@ private func l_captureWait(_ L: OpaquePointer?) -> Int32 {
     return 1
 }
 private func l_getScreenSize(_ L: OpaquePointer?) -> Int32 {
-    lua_createtable(L, 0, 2)
-    lua_pushnumber(L, Double(ScreenCapture.shared.width))
-    lua_setfield(L, -2, "width")
-    lua_pushnumber(L, Double(ScreenCapture.shared.height))
-    lua_setfield(L, -2, "height")
-    return 1
+    lua_pushinteger(L, lua_Integer(ScreenCapture.shared.width))
+    lua_pushinteger(L, lua_Integer(ScreenCapture.shared.height))
+    return 2
 }
 private func l_getPixelColor(_ L: OpaquePointer?) -> Int32 {
+    let x = Int(au_tointeger(L, 1))
+    let y = Int(au_tointeger(L, 2))
+    guard let c = ScreenCapture.shared.getPixelColor(x: x, y: y) else {
+        lua_pushnil(L); lua_pushnil(L); lua_pushnil(L)
+        return 3
+    }
+    lua_pushinteger(L, lua_Integer(c.r))
+    lua_pushinteger(L, lua_Integer(c.g))
+    lua_pushinteger(L, lua_Integer(c.b))
+    return 3
+}
+
+// ── 找色 ──
+private func l_findColor(_ L: OpaquePointer?) -> Int32 {
     let x = Int(au_tointeger(L, 1))
     let y = Int(au_tointeger(L, 2))
     guard let c = ScreenCapture.shared.getPixelColor(x: x, y: y) else {
         lua_pushnil(L)
         return 1
     }
-    lua_createtable(L, 0, 3)
-    lua_pushinteger(L, lua_Integer(c.r)); lua_setfield(L, -2, "r")
-    lua_pushinteger(L, lua_Integer(c.g)); lua_setfield(L, -2, "g")
-    lua_pushinteger(L, lua_Integer(c.b)); lua_setfield(L, -2, "b")
-    return 1
-}
-
-// ── 找色 ──
-private func l_findColor(_ L: OpaquePointer?) -> Int32 {
-    let r = Int(au_tointeger(L, 1)), g = Int(au_tointeger(L, 2)), b = Int(au_tointeger(L, 3))
-    let tol = lua_gettop(L) >= 4 ? Int(au_tointeger(L, 4)) : 5
-    let max = lua_gettop(L) >= 5 ? Int(au_tointeger(L, 5)) : 500
-    let pts = ScreenCapture.shared.findColor(r: r, g: g, b: b, tolerance: tol, maxResults: max)
-    pushPoints(L, pts)
+    let hex = (Int(c.r) << 16) | (Int(c.g) << 8) | Int(c.b)
+    lua_pushinteger(L, lua_Integer(hex))
     return 1
 }
 private func l_findColorInRegion(_ L: OpaquePointer?) -> Int32 {
