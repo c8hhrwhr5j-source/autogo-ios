@@ -10,6 +10,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
 
+        LogManager.shared.info("AutoGo 启动中...")
+
         window = UIWindow(frame: UIScreen.main.bounds)
         window?.rootViewController = ScriptViewController()
         window?.makeKeyAndVisible()
@@ -17,10 +19,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         setupBackgroundAudio()
         startShellService()
 
-        // 启动流式截图 (AutoGo 同款：后台持续捕获，脚本零延迟取帧)
+        // 启动流式截图
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
             ScreenCapture.shared.startStreaming(fps: 20)
+            LogManager.shared.info("流式截图已启动 (20fps)")
         }
+
+        let dev = UIDevice.current
+        LogManager.shared.info("设备: \(dev.model) | iOS \(dev.systemVersion) | 端口: 9999")
 
         return true
     }

@@ -16,9 +16,9 @@ class ShellService {
                 guard let self else { return }
                 switch state {
                 case .ready:
-                    print("AutoGo listening on port \(self.port)")
+                    LogManager.shared.info("TCP 监听已启动, 端口: \(self.port)")
                 case .failed(let error):
-                    print("Listener failed: \(error)")
+                    LogManager.shared.error("TCP 监听失败: \(error)")
                 default: break
                 }
             }
