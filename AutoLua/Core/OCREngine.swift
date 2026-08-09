@@ -76,7 +76,7 @@ final class OCREngine {
         region: CGRect? = nil,
         completion: @escaping (OCRResult?) -> Void
     ) {
-        guard let screenshot = ScreenCapture.shared.capture() else {
+        guard let screenshot = ScreenCapture.shared.captureImage() else {
             completion(nil)
             return
         }
@@ -131,6 +131,14 @@ final class OCREngine {
 
         _ = semaphore.wait(timeout: .now() + 10.0)
         return result
+    }
+
+    /// 同步识别屏幕（自动截屏，兼容旧 API）
+    func recognizeSync() -> String? {
+        guard let screenshot = ScreenCapture.shared.captureImage() else {
+            return nil
+        }
+        return recognizeSync(image: screenshot)?.text
     }
 
     /// 快速查找屏幕上包含指定文字的位置
