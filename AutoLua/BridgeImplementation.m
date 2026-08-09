@@ -166,6 +166,21 @@ IOSurfaceRef AutoLuaGetMainDisplaySurface(void) {
     return surface;
 }
 
+#pragma mark - Surface 尺寸查询
+
+int AutoLuaSurfaceGetWidth(IOSurfaceRef surface) {
+    if (!surface) return 0;
+    // 回退：直接读 surface 属性，依赖前一步 dlopen 已加载
+    if (IOSurfaceGetWidthFunc) return (int)IOSurfaceGetWidthFunc(surface);
+    return 0;
+}
+
+int AutoLuaSurfaceGetHeight(IOSurfaceRef surface) {
+    if (!surface) return 0;
+    if (IOSurfaceGetHeightFunc) return (int)IOSurfaceGetHeightFunc(surface);
+    return 0;
+}
+
 CGImageRef AutoLuaCreateImageFromSurface(IOSurfaceRef surface) {
     if (!surface) return NULL;
 

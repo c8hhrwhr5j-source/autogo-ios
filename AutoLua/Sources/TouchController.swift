@@ -1,206 +1,108 @@
 import UIKit
 
-// MARK: - IOHIDEvent 私有 API
-@_silgen_name("IOHIDEventCreateDigitizerEvent")
-func IOHIDEventCreateDigitizerEvent(
-    _ allocator: CFAllocator?, _ timestamp: UInt64, _ type: UInt32,
-    _ index: UInt32, _ identity: UInt32, _ eventMask: UInt32,
-    _ buttonMask: UInt32, _ x: Double, _ y: Double, _ z: Double,
-    _ transX: Double, _ transY: Double, _ transZ: Double,
-    _ range: UInt32, _ touch: UInt32, _ options: UInt32
-) -> Unmanaged<AnyObject>
-
-@_silgen_name("IOHIDEventSetSenderID")
-func IOHIDEventSetSenderID(_ event: Unmanaged<AnyObject>, _ senderID: UInt64)
-
-@_silgen_name("IOHIDEventPostEvent")
-func IOHIDEventPostEvent(_ connection: AnyObject, _ event: AnyObject, _ dest: Int32)
-
-/// 触摸控制器 —— 基于 IOHIDEvent 私有 API 注入系统级触摸事件
-/// 支持多点触控 (finger 0~9) 和精准延时控制
+/// 触摸控制器 —— 通过 Bridge ObjC 层注入 IOHIDEvent（动态加载 IOKit 私有框架）
 final class TouchController {
     static let shared = TouchController()
 
-    // 事件类型常量 (来自 IOHIDEventTypes.h)
-    private let kDigitizerTypeHand: UInt32   = 2   // 手指触摸
-    private let kDigitizerEventRange: UInt32    = 1
-    private let kDigitizerEventTouch: UInt32    = 1
-    private let kDigitizerEventIdentity: UInt32 = 2
+    private let touchQueue = DispatchQueue(label: "autolua.touch", qos: .userInteractive)
+    private var nextFingerID: Int32 = 1
 
-    // 事件阶段位掩码
-    private let maskTouch: UInt32    = 1 << 0   // 触摸存在
-    private let maskRange: UInt32    = 1 << 1   // 范围内
-    private let maskAttribute: UInt32 = 1 << 2  // 属性变化 (用于 ended)
+    /// 通过 Bridge 创建 HID 事件客户端
+    private let hidClient: CFTypeRef = AutoLuaHIDEventSystemClientCreate()
 
-    private let senderID: UInt64 = 0x8000000817310012
-    private let ioHIDEventConnection: AnyObject? = TouchController.createEventConnection()
+    // MARK: - 点击
 
-    // MARK: - 底层：单指事件
-
-    /// 手指按下
-    /// - Parameters:
-    ///   - x: 屏幕 X 坐标 (逻辑像素)
-    ///   - y: 屏幕 Y 坐标 (逻辑像素)
-    ///   - fingerIndex: 手指编号 0~9，默认 0
-    func touchDown(x: Double, y: Double, fingerIndex: UInt32 = 0) {
-        let timestamp = machAbsoluteTime()
-        let mask = maskTouch | maskRange
-        let event = IOHIDEventCreateDigitizerEvent(
-            nil, timestamp, kDigitizerTypeHand,
-            fingerIndex, kDigitizerEventIdentity,
-            mask, 0, x, y, 0, 0, 0, 0,
-            kDigitizerEventRange, kDigitizerEventTouch, 0
-        )
-        IOHIDEventSetSenderID(event, senderID)
-        IOHIDEventPostEvent(ioHIDEventConnection as AnyObject, event.takeRetainedValue(), 0)
+    func tap(x: Int, y: Int) {
+        let id = nextFinger()
+        postTouch(phase: kAutoLuaTouchPhaseBegan, x: Float(x), y: Float(y), fingerID: id)
+        Thread.sleep(forTimeInterval: 0.01)
+        postTouch(phase: kAutoLuaTouchPhaseEnded, x: Float(x), y: Float(y), fingerID: id)
     }
 
-    /// 手指移动
-    func touchMove(x: Double, y: Double, fingerIndex: UInt32 = 0) {
-        let timestamp = machAbsoluteTime()
-        let mask = maskTouch | maskRange
-        let event = IOHIDEventCreateDigitizerEvent(
-            nil, timestamp, kDigitizerTypeHand,
-            fingerIndex, kDigitizerEventIdentity,
-            mask, 0, x, y, 0, 0, 0, 0,
-            kDigitizerEventRange, kDigitizerEventTouch, 0
-        )
-        IOHIDEventSetSenderID(event, senderID)
-        IOHIDEventPostEvent(ioHIDEventConnection as AnyObject, event.takeRetainedValue(), 0)
+    func longPress(x: Int, y: Int, durationMs: Int) {
+        let id = nextFinger()
+        postTouch(phase: kAutoLuaTouchPhaseBegan, x: Float(x), y: Float(y), fingerID: id)
+        Thread.sleep(forTimeInterval: Double(durationMs) / 1000.0)
+        postTouch(phase: kAutoLuaTouchPhaseEnded, x: Float(x), y: Float(y), fingerID: id)
     }
 
-    /// 手指抬起
-    func touchUp(x: Double, y: Double, fingerIndex: UInt32 = 0) {
-        let timestamp = machAbsoluteTime()
-        let mask = maskAttribute
-        let event = IOHIDEventCreateDigitizerEvent(
-            nil, timestamp, kDigitizerTypeHand,
-            fingerIndex, kDigitizerEventIdentity,
-            mask, 0, x, y, 0, 0, 0, 0,
-            kDigitizerEventRange, kDigitizerEventTouch, 0
-        )
-        IOHIDEventSetSenderID(event, senderID)
-        IOHIDEventPostEvent(ioHIDEventConnection as AnyObject, event.takeRetainedValue(), 0)
+    // MARK: - 滑动
+
+    func swipe(from fromX: Int, fromY: Int, to toX: Int, toY: Int, durationMs: Int) {
+        // 简单实现：起点 → 终点 两阶段
+        let id = nextFinger()
+        postTouch(phase: kAutoLuaTouchPhaseBegan, x: Float(fromX), y: Float(fromY), fingerID: id)
+        Thread.sleep(forTimeInterval: 0.005)
+        postTouch(phase: kAutoLuaTouchPhaseMoved, x: Float(toX), y: Float(toY), fingerID: id)
+        Thread.sleep(forTimeInterval: 0.01)
+        postTouch(phase: kAutoLuaTouchPhaseEnded, x: Float(toX), y: Float(toY), fingerID: id)
     }
 
-    // MARK: - 高级：单指操作
+    // MARK: - 多点触控
 
-    /// 基础点击 (按下 → 等待 delayMs → 抬起)
-    /// delayMs 默认 30ms，模拟快速点击
-    func tap(x: Double, y: Double, delayMs: Int = 30) {
-        touchDown(x: x, y: y)
-        preciseSleep(milliseconds: delayMs)
-        touchUp(x: x, y: y)
-    }
-
-    /// 长按 (按下 → 保持 durationMs → 抬起)
-    func longPress(x: Double, y: Double, durationMs: Int = 800) {
-        touchDown(x: x, y: y)
-        preciseSleep(milliseconds: durationMs)
-        touchUp(x: x, y: y)
-    }
-
-    /// 滑动 (从 fromX,fromY 匀速移动到 toX,toY)
-    func swipe(fromX: Double, fromY: Double, toX: Double, toY: Double,
-               durationMs: Int = 300, steps: Int = 30) {
-        guard steps > 0 else { return }
-        let stepTime = durationMs / steps
-        let dx = (toX - fromX) / Double(steps)
-        let dy = (toY - fromY) / Double(steps)
-
-        touchDown(x: fromX, y: fromY)
-        for i in 1...steps {
-            preciseSleep(milliseconds: stepTime)
-            let x = fromX + dx * Double(i)
-            let y = fromY + dy * Double(i)
-            touchMove(x: x, y: y)
+    func multiTap(points: [(x: Int, y: Int)]) {
+        // 多点同时落下
+        var ids: [Int32] = []
+        for pt in points {
+            let id = nextFinger()
+            ids.append(id)
+            postTouch(phase: kAutoLuaTouchPhaseBegan, x: Float(pt.x), y: Float(pt.y), fingerID: id)
         }
-        preciseSleep(milliseconds: 20)
-        touchUp(x: toX, y: toY)
-    }
-
-    // MARK: - 高级：多点触控
-
-    /// 多点同时按下
-    /// - Parameter points: [(x, y)] 数组，每个元素对应一个手指
-    ///   例如 [(100,200), (300,400)] 表示食指按 (100,200)，中指按 (300,400)
-    func multiTouchDown(_ points: [(x: Double, y: Double)]) {
+        Thread.sleep(forTimeInterval: 0.01)
+        // 多点同时抬起
         for (i, pt) in points.enumerated() {
-            touchDown(x: pt.x, y: pt.y, fingerIndex: UInt32(i))
+            postTouch(phase: kAutoLuaTouchPhaseEnded, x: Float(pt.x), y: Float(pt.y), fingerID: ids[i])
         }
     }
 
-    /// 多点同时抬起
-    func multiTouchUp(_ points: [(x: Double, y: Double)]) {
-        for (i, pt) in points.enumerated() {
-            touchUp(x: pt.x, y: pt.y, fingerIndex: UInt32(i))
+    func pinch(centerX: Int, centerY: Int, scale: Float, durationMs: Int) {
+        // 双指缩放模拟：两指向外/向内移动
+        let distance: Float = 50.0 * scale
+        let id1 = nextFinger()
+        let id2 = nextFinger()
+
+        postTouch(phase: kAutoLuaTouchPhaseBegan, x: Float(centerX) - 30, y: Float(centerY), fingerID: id1)
+        postTouch(phase: kAutoLuaTouchPhaseBegan, x: Float(centerX) + 30, y: Float(centerY), fingerID: id2)
+        Thread.sleep(forTimeInterval: 0.01)
+
+        let steps = max(1, durationMs / 10)
+        for step in 1...steps {
+            let t = Float(step) / Float(steps)
+            let d = distance * t
+            postTouch(phase: kAutoLuaTouchPhaseMoved, x: Float(centerX) - 30 - d, y: Float(centerY), fingerID: id1)
+            postTouch(phase: kAutoLuaTouchPhaseMoved, x: Float(centerX) + 30 + d, y: Float(centerY), fingerID: id2)
+            Thread.sleep(forTimeInterval: 0.01)
         }
+
+        postTouch(phase: kAutoLuaTouchPhaseEnded, x: Float(centerX) - 30 - distance, y: Float(centerY), fingerID: id1)
+        postTouch(phase: kAutoLuaTouchPhaseEnded, x: Float(centerX) + 30 + distance, y: Float(centerY), fingerID: id2)
     }
 
-    /// 多点同时点击 (双指缩放等手势)
-    func multiTap(_ points: [(x: Double, y: Double)], delayMs: Int = 30) {
-        multiTouchDown(points)
-        preciseSleep(milliseconds: delayMs)
-        multiTouchUp(points)
+    // MARK: - 内部
+
+    private func nextFinger() -> Int32 {
+        nextFingerID += 1
+        return nextFingerID
     }
 
-    /// 双指缩放
-    /// - Parameters:
-    ///   - centerX / centerY: 缩放中心点
-    ///   - fromDistance: 起始两指间距
-    ///   - toDistance: 目标两指间距
-    func pinch(centerX: Double, centerY: Double,
-               fromDistance: Double, toDistance: Double,
-               durationMs: Int = 300, steps: Int = 20) {
-        guard steps > 0 else { return }
-        let stepTime = durationMs / steps
-        let dDist = (toDistance - fromDistance) / Double(steps)
+    private func postTouch(phase: Int32, x: Float, y: Float, fingerID: Int32) {
+        guard let event = AutoLuaCreateDigitizerEvent(
+            0,                                          // timestamp (0 = 自动)
+            kAutoLuaTransducerTypeHand,
+            fingerID,                                    // index
+            fingerID,                                    // identifier
+            phase,                                       // eventMask (phase)
+            0,                                           // buttonMask
+            x, y,
+            0,                                           // z
+            1.0,                                         // tipPressure
+            0, 0, 0, 0, 0,                                // twist, range, quality, density, irregularity
+            0                                            // majorRadius
+        ) else { return }
 
-        for i in 0...steps {
-            let dist = fromDistance + dDist * Double(i)
-            let half = dist / 2
-            let p1 = (x: centerX - half, y: centerY)
-            let p2 = (x: centerX + half, y: centerY)
+        // 设置发送者 ID（关键：不设置则触控不会被识别）
+        AutoLuaHIDEventSetInteger(event, 0x00010000, 0x0810)
 
-            if i == 0 {
-                multiTouchDown([p1, p2])
-            } else if i == steps {
-                multiTouchUp([p1, p2])
-            } else {
-                touchMove(x: p1.x, y: p1.y, fingerIndex: 0)
-                touchMove(x: p2.x, y: p2.y, fingerIndex: 1)
-            }
-            if i < steps { preciseSleep(milliseconds: stepTime) }
-        }
-    }
-
-    // MARK: - 辅助
-
-    private func preciseSleep(milliseconds: Int) {
-        if milliseconds <= 0 { return }
-        var ts = timespec(tv_sec: milliseconds / 1000,
-                          tv_nsec: (milliseconds % 1000) * 1_000_000)
-        nanosleep(&ts, nil)
-    }
-
-    private func machAbsoluteTime() -> UInt64 {
-        var info = mach_timebase_info_data_t()
-        mach_timebase_info(&info)
-        let now = mach_absolute_time()
-        return now * UInt64(info.numer) / UInt64(info.denom)  // → 纳秒
-    }
-
-    private static func createEventConnection() -> AnyObject? {
-        typealias IOHIDEventSystemClientCreate = @convention(c) (CFAllocator?) -> Unmanaged<AnyObject>?
-        typealias IOHIDEventSystemClientDispatchEventQueueCreate = @convention(c) (CFAllocator?) -> Unmanaged<AnyObject>?
-
-        guard let IOKit = dlopen("/System/Library/Frameworks/IOKit.framework/IOKit", RTLD_NOW) else {
-            return nil
-        }
-        guard let clientCreate = dlsym(IOKit, "IOHIDEventSystemClientCreate") else {
-            return nil
-        }
-        let createFn = unsafeBitCast(clientCreate, to: IOHIDEventSystemClientCreate.self)
-        return createFn(nil)?.takeRetainedValue()
+        _ = AutoLuaHIDEventSystemClientDispatchEvent(hidClient, event)
     }
 }

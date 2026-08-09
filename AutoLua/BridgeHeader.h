@@ -54,6 +54,8 @@ int32_t AutoLuaHIDEventSystemClientDispatchEvent(CFTypeRef client, CFTypeRef eve
 // IOSurface 屏幕捕获
 // ============================================================
 IOSurfaceRef AutoLuaGetMainDisplaySurface(void);
+int AutoLuaSurfaceGetWidth(IOSurfaceRef surface);
+int AutoLuaSurfaceGetHeight(IOSurfaceRef surface);
 CGImageRef AutoLuaCreateImageFromSurface(IOSurfaceRef surface);
 NSData* AutoLuaGetPixelData(IOSurfaceRef surface, CGRect rect);
 
