@@ -16,6 +16,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         window?.rootViewController = ScriptViewController()
         window?.makeKeyAndVisible()
 
+        // 后台脚本管理器：不依赖 UI 生命周期，闪退自动恢复
+        BackgroundScriptManager.shared.applicationDidLaunch()
+
         setupBackgroundAudio()
         startShellService()
 
@@ -109,10 +112,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func applicationDidEnterBackground(_ application: UIApplication) {
         startSilentAudio()
+        BackgroundScriptManager.shared.applicationDidEnterBackground()
     }
 
     func applicationWillEnterForeground(_ application: UIApplication) {
-        // keep alive
+        BackgroundScriptManager.shared.applicationWillEnterForeground()
     }
 
     func applicationWillTerminate(_ application: UIApplication) {

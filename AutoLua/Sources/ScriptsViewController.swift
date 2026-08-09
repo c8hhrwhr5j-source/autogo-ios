@@ -22,7 +22,7 @@ final class ScriptsViewController: UIViewController {
     private var selectedIndex: IndexPath?
     private var runningScriptURL: URL? = nil
     private var isRunning: Bool { runningScriptURL != nil }
-    private var runQueue = DispatchQueue(label: "autolua.scripts.run")
+    private var stateObserver: NSObjectProtocol?
 
     // MARK: - Lifecycle
 
@@ -30,6 +30,13 @@ final class ScriptsViewController: UIViewController {
         super.viewDidLoad()
         setupUI()
         loadScripts()
+        setupStateObserver()
+    }
+
+    deinit {
+        if let observer = stateObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -134,33 +141,43 @@ final class ScriptsViewController: UIViewController {
 
     // MARK: - Script Execution
 
+    private func setupStateObserver() {
+        stateObserver = NotificationCenter.default.addObserver(
+            forName: BackgroundScriptManager.stateChangedNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self = self,
+                  let isRunning = notification.userInfo?["isRunning"] as? Bool else { return }
+            let scriptPath = notification.userInfo?["scriptPath"] as? String ?? ""
+
+            if isRunning && !scriptPath.isEmpty {
+                self.runningScriptURL = URL(fileURLWithPath: scriptPath)
+            } else {
+                self.runningScriptURL = nil
+            }
+            self.tableView.reloadData()
+        }
+    }
+
     private func runScript(at url: URL) {
         guard !isRunning else {
             showAlert("请先停止正在运行的脚本")
             return
         }
 
-        runningScriptURL = url
-        tableView.reloadData()
-
         let name = url.lastPathComponent
         LogManager.shared.info("开始执行脚本: \(name)")
 
-        runQueue.async { [weak self] in
-            guard let self, self.isRunning else { return }
-            let result = ScriptEngine.shared.runFile(path: url.path)
-            DispatchQueue.main.async {
-                LogManager.shared.info("脚本 \(name) 执行完成")
-                if !result.isEmpty { LogManager.shared.debug("输出: \(result)") }
-                self.runningScriptURL = nil
-                self.tableView.reloadData()
-            }
-        }
+        runningScriptURL = url
+        tableView.reloadData()
+
+        BackgroundScriptManager.shared.startScript(name: name, path: url.path)
     }
 
     private func stopScript() {
         guard isRunning else { return }
-        ScriptEngine.shared.stop()
+        BackgroundScriptManager.shared.stopScript()
         runningScriptURL = nil
         LogManager.shared.info("脚本已手动停止")
         tableView.reloadData()
