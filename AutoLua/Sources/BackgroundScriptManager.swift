@@ -49,7 +49,7 @@ final class BackgroundScriptManager {
     /// 运行指定路径的脚本
     func startScript(name: String, path: String) {
         guard !isRunning else {
-            LogManager.shared.warning("BackgroundScriptManager: 已有脚本 (\(currentScriptName ?? "?")) 在运行，跳过 \(name)")
+            LogManager.shared.warn("BackgroundScriptManager: 已有脚本 (\(currentScriptName ?? "?")) 在运行，跳过 \(name)")
             return
         }
 
@@ -107,7 +107,7 @@ final class BackgroundScriptManager {
             LogManager.shared.info("BackgroundScriptManager: 自动启动 main.lua")
             startScript(name: "main.lua", path: mainScriptURL.path)
         } else {
-            LogManager.shared.warning("BackgroundScriptManager: main.lua 未找到，跳过自动启动")
+            LogManager.shared.warn("BackgroundScriptManager: main.lua 未找到，跳过自动启动")
         }
     }
 
@@ -121,7 +121,7 @@ final class BackgroundScriptManager {
 
         // 从 app bundle 读取
         guard let bundledPath = Bundle.main.path(forResource: "main", ofType: "lua") else {
-            LogManager.shared.warning("BackgroundScriptManager: Bundle 中未找到 main.lua")
+            LogManager.shared.warn("BackgroundScriptManager: Bundle 中未找到 main.lua")
             return
         }
 
@@ -141,7 +141,7 @@ final class BackgroundScriptManager {
     private func beginBackgroundTask() {
         endBackgroundTask()
         backgroundTaskId = UIApplication.shared.beginBackgroundTask(withName: "AutoLua.ScriptRunner") { [weak self] in
-            LogManager.shared.warning("BackgroundScriptManager: 后台任务即将过期")
+            LogManager.shared.warn("BackgroundScriptManager: 后台任务即将过期")
             self?.endBackgroundTask()
         }
         if backgroundTaskId != .invalid {
