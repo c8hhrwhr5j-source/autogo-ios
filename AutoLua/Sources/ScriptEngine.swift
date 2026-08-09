@@ -263,7 +263,7 @@ final class ScriptEngine {
         lua_getglobal(L, "_G")
         lua_pushcclosure(L, l_print, 0)
         lua_setfield(L, -2, "print")
-        lua_pop(L, 1)
+        au_pop(L, 1)
 
         // 创建 autolua 表
         lua_createtable(L, 0, 23)
