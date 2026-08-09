@@ -191,6 +191,22 @@ private func l_sleep(_ L: OpaquePointer?) -> Int32 {
     Thread.sleep(forTimeInterval: Double(ms) / 1000.0)
     return 0
 }
+private func l_debug(_ L: OpaquePointer?) -> Int32 {
+    let msg = String(cString: au_tostring(L, 1))
+    LogManager.shared.debug(msg)
+    return 0
+}
+
+// ── 覆盖全局 print，重定向到日志 ──
+private func l_print(_ L: OpaquePointer?) -> Int32 {
+    let n = lua_gettop(L)
+    let parts: [String] = (1...Int(n)).compactMap { i in
+        au_tostring(L, Int32(i)).map { String(cString: $0) }
+    }
+    let msg = parts.joined(separator: "\t")
+    LogManager.shared.debug("[lua] \(msg)")
+    return 0
+}
 
 
 // MARK: - 辅助函数
@@ -243,8 +259,14 @@ final class ScriptEngine {
     private func registerAPI() {
         guard let L = L else { return }
 
+        // 覆盖全局 print，重定向到应用日志
+        lua_getglobal(L, "_G")
+        lua_pushcclosure(L, l_print, 0)
+        lua_setfield(L, -2, "print")
+        lua_pop(L, 1)
+
         // 创建 autolua 表
-        lua_createtable(L, 0, 22)
+        lua_createtable(L, 0, 23)
 
         // ── 截图 ──
         regFn(L, "capture",          l_capture)
@@ -281,6 +303,7 @@ final class ScriptEngine {
 
         // ── 工具 ──
         regFn(L, "sleep",      l_sleep)
+        regFn(L, "debug",      l_debug)
 
         // 注册为全局表
         lua_setglobal(L, "autolua")
