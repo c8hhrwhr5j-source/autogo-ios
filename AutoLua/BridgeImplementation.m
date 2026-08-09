@@ -12,8 +12,8 @@
 #import <mach/kern_return.h>
 #import <CoreGraphics/CoreGraphics.h>
 
-// IOSurface 私有框架 — 类型前向声明 + 动态加载
-typedef CFTypeRef IOSurfaceRef;
+// IOSurface 类型通过 UIKit→CoreImage→CoreVideo→IOSurface 间接可用
+// 函数仍通过 dlopen/dlsym 动态加载
 #define kIOSurfaceLockReadOnly 0x00000001
 
 // ============================================================
@@ -135,7 +135,7 @@ static void loadIOMobileFramebuffer(void) {
 
         // 备用：CARenderServer
         if (!IOMobileFramebufferGetMainDisplay) {
-            void *caHandle = dlopen("/System/Library/Frameworks/QuartzCore.framework/QuartzCore", RTLD_LAZY);
+            (void)dlopen("/System/Library/Frameworks/QuartzCore.framework/QuartzCore", RTLD_LAZY);
             // CARenderServerRenderDisplay 可作为备用
         }
     });
