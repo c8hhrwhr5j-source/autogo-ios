@@ -257,7 +257,7 @@ final class ScriptEngine {
     func stop() {
         shouldStop = true
         if let L = L {
-            AutoLuaSetHookStop(L, 1)
+            AutoLuaSetHookStop(UnsafeMutableRawPointer(L), 1)
         }
     }
 
@@ -320,28 +320,30 @@ final class ScriptEngine {
 
     /// 执行 Lua 脚本
     func runLua(_ script: String) -> String {
-        return queue.sync {
+        var result: String = ""
+        queue.sync {
             shouldStop = false
-            guard let L = self.L else { return "Error: Lua state not initialized" }
-            AutoLuaSetHookStop(L, 0)
+            guard let L = self.L else { result = "Error: Lua state not initialized"; return }
+            AutoLuaSetHookStop(UnsafeMutableRawPointer(L), 0)
 
             // 加载代码
             let loadResult = script.withCString { au_loadstring(L, $0) }
             if loadResult != kLuaOK {
                 let err = String(cString: au_tostring(L, -1))
                 au_pop(L, 1)
-                return "Lua Error: \(err)"
+                result = "Lua Error: \(err)"
+                return
             }
 
             // 执行
             if au_pcall(L, 0, 1, 0) != kLuaOK {
                 let err = String(cString: au_tostring(L, -1))
                 au_pop(L, 1)
-                return "Lua Error: \(err)"
+                result = "Lua Error: \(err)"
+                return
             }
 
             // 提取返回值
-            let result: String
             if au_isnil(L, -1) != 0 {
                 result = ""
             } else if au_isstring(L, -1) != 0 || au_isnumber(L, -1) != 0 {
@@ -350,8 +352,8 @@ final class ScriptEngine {
                 result = "(result)"
             }
             au_pop(L, 1)
-            return result
         }
+        return result
     }
 
     /// 执行 Lua 脚本文件
