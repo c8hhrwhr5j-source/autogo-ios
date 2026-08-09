@@ -5,7 +5,7 @@ class ShellService {
     private var listener: NWListener?
     private let port: UInt16 = 9999
     private var connections: [NWConnection] = []
-    private let scriptEngine = ScriptEngine()
+    private var scriptEngine: ScriptEngine { ScriptEngine.shared }
 
     func start() {
         do {

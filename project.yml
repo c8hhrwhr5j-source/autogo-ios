@@ -25,7 +25,13 @@ targets:
         CODE_SIGN_IDENTITY: "-"
         PROVISIONING_PROFILE_SPECIFIER: ""
         SWIFT_VERSION: "5.0"
-    dependencies: []
+    dependencies:
+      - sdk: JavaScriptCore.framework
+      - sdk: Network.framework
+      - sdk: Vision.framework
+      - sdk: UIKit.framework
+      - sdk: CoreGraphics.framework
+      - sdk: UIKit.framework
     preBuildScripts:
       - name: "Clean Build"
         script: |
