@@ -160,6 +160,7 @@ final class ScriptsViewController: UIViewController {
 
     private func stopScript() {
         guard isRunning else { return }
+        ScriptEngine.shared.stop()
         runningScriptURL = nil
         LogManager.shared.info("脚本已手动停止")
         tableView.reloadData()

@@ -403,3 +403,25 @@ void AutoLuaLuaGetGlobal(void *L, const char *name) {
 }
 
 // Lua engine implementation ends
+
+// ============================================================
+// Lua script stop hook
+// ============================================================
+
+static volatile int _autolua_should_stop = 0;
+
+static void _autolua_stop_hook(lua_State *L, lua_Debug *ar) {
+    (void)ar;
+    if (_autolua_should_stop) {
+        luaL_error(L, "Script stopped by user");
+    }
+}
+
+void AutoLuaSetHookStop(void *L, int enable) {
+    _autolua_should_stop = enable;
+    if (enable) {
+        lua_sethook((lua_State*)L, _autolua_stop_hook, LUA_MASKLINE, 0);
+    } else {
+        lua_sethook((lua_State*)L, NULL, 0, 0);
+    }
+}

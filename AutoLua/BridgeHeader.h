@@ -81,4 +81,6 @@ int   AutoLuaLuaLoadString(void* L, const char* code);
 int   AutoLuaLuaPCall(void* L, int nargs, int nresults);
 const char* AutoLuaLuaToString(void* L, int index);
 
+void AutoLuaSetHookStop(void* L, int enable);
+
 #endif /* BridgeHeader_h */

@@ -237,6 +237,7 @@ final class ScriptEngine {
 
     private var L: OpaquePointer?
     private let queue = DispatchQueue(label: "autolua.script")
+    private var shouldStop: Bool = false
 
     private init() {
         guard let state = AutoLuaLuaNewState() else {
@@ -250,6 +251,13 @@ final class ScriptEngine {
     deinit {
         if let L = L {
             AutoLuaLuaCloseState(unsafeBitCast(L, to: UnsafeMutableRawPointer.self))
+        }
+    }
+
+    func stop() {
+        shouldStop = true
+        if let L = L {
+            AutoLuaSetHookStop(L, 1)
         }
     }
 
@@ -313,7 +321,9 @@ final class ScriptEngine {
     /// 执行 Lua 脚本
     func runLua(_ script: String) -> String {
         return queue.sync {
+            shouldStop = false
             guard let L = self.L else { return "Error: Lua state not initialized" }
+            AutoLuaSetHookStop(L, 0)
 
             // 加载代码
             let loadResult = script.withCString { au_loadstring(L, $0) }
