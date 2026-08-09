@@ -71,6 +71,7 @@ NSDictionary* AutoLuaGetRunningApplications(void);
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
+#include "LuaShim.h"
 
 void* AutoLuaLuaNewState(void);
 void  AutoLuaLuaCloseState(void* L);

@@ -228,8 +228,6 @@ final class SettingsViewController: UIViewController {
             logTextView.text = LogManager.shared.readToday()
         } else {
             for (i, file) in logFiles.enumerated() {
-                let name = file.deletingPathExtension().lastPathComponent
-                let short = String(name.suffix(4)) + "/" + String(name.suffix(4).prefix(2)) + "/" + String(name.prefix(4))
                 filePicker.insertSegment(withTitle: file.lastPathComponent, at: i, animated: false)
             }
             filePicker.selectedSegmentIndex = 0
