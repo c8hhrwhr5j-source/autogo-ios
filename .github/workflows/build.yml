@@ -1,0 +1,110 @@
+name: Build AutoGo iOS IPA
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (例如 1.0.0)'
+        required: false
+        default: '1.0'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          # 安装 xcodegen
+          brew install xcodegen
+
+          # 安装 ldid (用于巨魔签名)
+          brew install ldid
+
+          # 验证安装
+          xcodegen --version
+          ldid -v
+
+      - name: Generate Xcode project
+        run: |
+          cd "${{ github.workspace }}"
+          xcodegen generate --spec project.yml
+
+      - name: Build .app
+        run: |
+          cd "${{ github.workspace }}"
+          xcodebuild \
+            -project AutoGo.xcodeproj \
+            -scheme AutoGo \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build/derived \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            DEVELOPMENT_TEAM="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            ONLY_ACTIVE_ARCH=NO \
+            ARCHS="arm64" \
+            VALID_ARCHS="arm64" \
+            build
+
+      - name: Locate .app
+        run: |
+          APP_PATH=$(find "${{ github.workspace }}/build/derived/Build/Products" -name "*.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "❌ 未找到 .app 构建产物"
+            exit 1
+          fi
+          echo "APP_PATH=$APP_PATH" >> $GITHUB_ENV
+          echo "✅ 找到 .app: $APP_PATH"
+
+      - name: Sign .app with ldid
+        run: |
+          cd "${{ github.workspace }}"
+          ldid -S"AutoGo/AutoGo.entitlements" "$APP_PATH/AutoGo"
+          echo "✅ ldid 签名完成"
+
+      - name: Package .ipa
+        run: |
+          cd "${{ github.workspace }}"
+          VERSION="${{ github.event.inputs.version || '1.0' }}"
+          mkdir -p build/Payload
+          cp -R "$APP_PATH" "build/Payload/AutoGo.app"
+          cd build
+          zip -qr "AutoGo-v${VERSION}.ipa" Payload
+          rm -rf Payload
+          echo "✅ IPA 打包完成: $(pwd)/AutoGo-v${VERSION}.ipa"
+          echo "IPA_NAME=AutoGo-v${VERSION}.ipa" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AutoGo-iOS-IPA
+          path: build/*.ipa
+          if-no-files-found: error
+
+      - name: Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: auto-build-${{ github.run_number }}
+          name: AutoGo 自动构建 #${{ github.run_number }}
+          body: |
+            巨魔版 AutoGo IPA 自动构建
+            - 构建时间: ${{ github.event.head_commit.timestamp }}
+            - 提交: ${{ github.sha }}
+            - 安装方式: 使用 TrollStore 巨魔商店安装
+          files: build/*.ipa
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

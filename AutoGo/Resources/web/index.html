@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AutoGo 控制台</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- 顶部栏 -->
+    <header class="topbar">
+        <h1>⚡ AutoGo</h1>
+        <div class="topbar-right">
+            <span id="foregroundApp" class="app-badge">检测中...</span>
+            <span id="serverStatus" class="status-dot online"></span>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="container">
+
+        <!-- 触摸操作卡片 -->
+        <section class="card">
+            <div class="card-header">
+                <h2>👆 触摸操作</h2>
+            </div>
+
+            <!-- 点击 -->
+            <div class="form-row">
+                <label class="form-label">点击坐标</label>
+                <div class="input-group">
+                    <input type="number" id="tapX" class="input small" placeholder="X" value="200">
+                    <input type="number" id="tapY" class="input small" placeholder="Y" value="400">
+                    <input type="number" id="tapDelay" class="input tiny" placeholder="延迟ms" value="50">
+                    <button class="btn btn-primary" onclick="actions.tap()">点击</button>
+                </div>
+            </div>
+
+            <!-- 滑动 -->
+            <div class="form-row">
+                <label class="form-label">滑动</label>
+                <div class="input-group">
+                    <span class="input-label">从</span>
+                    <input type="number" id="swX1" class="input small" placeholder="X1" value="100">
+                    <input type="number" id="swY1" class="input small" placeholder="Y1" value="500">
+                    <span class="input-label">到</span>
+                    <input type="number" id="swX2" class="input small" placeholder="X2" value="100">
+                    <input type="number" id="swY2" class="input small" placeholder="Y2" value="200">
+                    <input type="number" id="swDuration" class="input tiny" placeholder="时长ms" value="300">
+                    <button class="btn btn-primary" onclick="actions.swipe()">滑动</button>
+                </div>
+            </div>
+
+            <!-- 长按 / 双指 -->
+            <div class="form-row" style="margin-top:4px">
+                <button class="btn btn-secondary" onclick="actions.longPress()">长按</button>
+                <input type="number" id="lpDuration" class="input tiny" placeholder="ms" value="800">
+                <button class="btn btn-secondary" onclick="actions.pinch()">双指</button>
+            </div>
+        </section>
+
+        <!-- 找色卡片 -->
+        <section class="card">
+            <div class="card-header">
+                <h2>🎨 找色</h2>
+            </div>
+            <div class="form-row">
+                <div class="input-group">
+                    <input type="text" id="colorHex" class="input" placeholder="颜色值，如 #FF0000" value="#FF0000">
+                    <input type="color" id="colorPicker" class="color-picker" value="#FF0000" onchange="syncColorPicker()">
+                    <input type="number" id="colorTolerance" class="input tiny" placeholder="容差" value="5">
+                    <button class="btn btn-primary" onclick="actions.findColor()">查找</button>
+                </div>
+            </div>
+            <div id="colorResult" class="result-box" style="display:none"></div>
+        </section>
+
+        <!-- OCR 卡片 -->
+        <section class="card">
+            <div class="card-header">
+                <h2>🔤 OCR 文字识别</h2>
+            </div>
+            <div class="form-row">
+                <div class="input-group">
+                    <button class="btn btn-primary" onclick="actions.ocrAll()">识别全部文字</button>
+                    <input type="text" id="ocrKeyword" class="input" placeholder="输入要搜索的关键字...">
+                    <button class="btn btn-secondary" onclick="actions.findText()">查找坐标</button>
+                </div>
+            </div>
+            <div id="ocrResult" class="result-box" style="display:none"></div>
+        </section>
+
+        <!-- 截图卡片 -->
+        <section class="card">
+            <div class="card-header">
+                <h2>📷 截图</h2>
+                <button class="btn btn-secondary btn-sm" onclick="actions.screenshot()">截取屏幕</button>
+            </div>
+            <div id="screenshotContainer" style="display:none">
+                <img id="screenshotImg" class="screenshot" alt="截图">
+                <div class="actions-bar">
+                    <button class="btn btn-secondary btn-sm" onclick="actions.tapAtClick(event)">点击截图位置</button>
+                    <span class="hint">（点击截图可直接获取坐标）</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 日志输出 -->
+        <section class="card">
+            <div class="card-header flex-between">
+                <h2>📋 日志</h2>
+                <button class="btn btn-secondary btn-sm" onclick="clearLog()">清空</button>
+            </div>
+            <div id="logOutput" class="log-box">等待操作...</div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>

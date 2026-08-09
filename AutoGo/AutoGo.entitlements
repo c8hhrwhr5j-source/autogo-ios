@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 巨魔核心权限：标记为平台应用 -->
+	<key>platform-application</key>
+	<true/>
+
+	<!-- 允许跳过代码签名验证 -->
+	<key>com.apple.private.skip-library-validation</key>
+	<true/>
+
+	<!-- HID 事件注入（模拟触摸） -->
+	<key>com.apple.private.hid.client.event-dispatch</key>
+	<true/>
+	<key>com.apple.private.hid.client.event-filter</key>
+	<true/>
+
+	<!-- IOSurface 帧缓冲访问（截屏） -->
+	<key>com.apple.private.IOSurface.foreground</key>
+	<true/>
+
+	<!-- 无容器限制（可访问系统路径） -->
+	<key>com.apple.private.security.no-container</key>
+	<true/>
+
+	<!-- 允许访问沙盒外的文件 -->
+	<key>com.apple.private.security.storage.AppDataContainers</key>
+	<true/>
+
+	<!-- 后台运行 -->
+	<key>com.apple.private.allow-unsigned-long-task-entitlement</key>
+	<true/>
+
+	<!-- 网络访问 -->
+	<key>com.apple.security.network.server</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+
+	<!-- 增加内存限制 -->
+	<key>com.apple.private.memorystatus</key>
+	<true/>
+
+	<!-- 允许获取前台应用信息 -->
+	<key>com.apple.private.runningboard.reported-foreground</key>
+	<true/>
+
+	<!-- 系统信息访问 -->
+	<key>com.apple.private.system-info</key>
+	<true/>
+
+	<!-- 悬浮窗相关 -->
+	<key>com.apple.QuartzCore.secure-surface</key>
+	<true/>
+
+	<!-- 允许访问所有进程 -->
+	<key>com.apple.private.task-ports</key>
+	<true/>
+</dict>
+</plist>
