@@ -43,6 +43,7 @@
 | HUD | `updateHud` | 更新浮窗文字 |
 | HUD | `toast` | 弹出提示 |
 | 工具 | `sleep` | 延迟等待 |
+| 工具 | `debug` | 写入调试日志 |
 
 ---
 
@@ -427,6 +428,23 @@ autolua.toast("已保存", 2.0)
 ```lua
 autolua.sleep(1000)   -- 等待 1 秒
 autolua.sleep(500)    -- 等待 0.5 秒
+```
+
+### debug(msg)
+写入一条调试日志。日志会保存到 `/var/mobile/AutoLua/log/` 目录，并显示在手机的日志页面中。
+
+**注意：** 脚本中的 `print()` 也会自动重定向写入日志，效果等同于 `autolua.debug()`。
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| msg | string | 日志文本 |
+
+```lua
+autolua.debug("脚本运行开始")
+
+-- print() 也会自动写入日志，无需修改现有代码
+print("当前颜色: " .. autolua.findColor(100, 200))
+print("执行完毕")
 ```
 
 ---
