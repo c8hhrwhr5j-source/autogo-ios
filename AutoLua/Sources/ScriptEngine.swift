@@ -68,7 +68,7 @@ private func l_findMultiColors(_ L: OpaquePointer?) -> Int32 {
     let tol = lua_gettop(L) >= 3 ? Int(au_tointeger(L, 3)) : 5
     let max = lua_gettop(L) >= 4 ? Int(au_tointeger(L, 4)) : 100
     let pts = ScreenCapture.shared.findMultiColorsStr(firstColorHex: fc, pointsStr: ptsStr, tolerance: tol, maxResults: max)
-    pushPoints(L, pts)
+    pushPoints(L, pts.map { ($0.x, $0.y) })
     return 1
 }
 private func l_findMultiColorsEx(_ L: OpaquePointer?) -> Int32 {
@@ -77,7 +77,7 @@ private func l_findMultiColorsEx(_ L: OpaquePointer?) -> Int32 {
     let max = lua_gettop(L) >= 6 ? Int(au_tointeger(L, 6)) : 100
     var rps: [(Int, Int, Int, Int, Int)] = []
     if au_istable(L, 5) != 0 {
-        let n = lua_objlen(L, 5)
+        let n = au_objlen(L, 5)
         for i in 1...Int(n) {
             lua_rawgeti(L, 5, lua_Integer(i))
             lua_getfield(L, -1, "dx"); let dx = Int(au_tointeger(L, -1)); au_pop(L, 1)
@@ -90,7 +90,7 @@ private func l_findMultiColorsEx(_ L: OpaquePointer?) -> Int32 {
         }
     }
     let pts = ScreenCapture.shared.findMultiColors(firstColor: (r, g, b), tolerance: tol, relativePoints: rps, maxResults: max)
-    pushPoints(L, pts)
+    pushPoints(L, pts.map { ($0.x, $0.y) })
     return 1
 }
 
@@ -138,7 +138,7 @@ private func l_touchMove(_ L: OpaquePointer?) -> Int32 {
 private func l_multiTap(_ L: OpaquePointer?) -> Int32 {
     var pts: [(Double, Double)] = []
     if au_istable(L, 1) != 0 {
-        let n = lua_objlen(L, 1)
+        let n = au_objlen(L, 1)
         for i in 1...Int(n) {
             lua_rawgeti(L, 1, lua_Integer(i))
             lua_getfield(L, -1, "x"); let x = au_tonumber(L, -1); au_pop(L, 1)

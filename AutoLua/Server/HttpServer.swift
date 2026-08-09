@@ -193,7 +193,7 @@ final class HttpServer {
         guard requestParts.count >= 2 else { return nil }
 
         let method = requestParts[0]
-        var fullPath = requestParts[1]
+        let fullPath = requestParts[1]
 
         // 解析 headers
         var headers: [String: String] = [:]
@@ -222,7 +222,7 @@ final class HttpServer {
         }
 
         // 尝试从 body 解析更多参数（JSON）
-        var finalBody = body
+        let finalBody = body
         var mergedParams = params
         if let bodyData = body, let json = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] {
             for (k, v) in json {

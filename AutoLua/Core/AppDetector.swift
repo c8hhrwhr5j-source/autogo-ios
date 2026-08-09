@@ -95,10 +95,8 @@ final class AppDetector {
         let ctrl = controllerClass.perform(NSSelectorFromString("sharedInstance"))?.takeUnretainedValue()
         guard let ctrlObj = ctrl as? NSObject else { return nil }
 
-        if let app = ctrlObj.perform(NSSelectorFromString("frontmostAppWithBundleID:"),
-                                      with: "com.apple.springboard")?.takeUnretainedValue() {
-            // 获取前台应用
-        }
+        _ = ctrlObj.perform(NSSelectorFromString("frontmostAppWithBundleID:"),
+                                     with: "com.apple.springboard")?.takeUnretainedValue()
 
         // 获取所有应用并检查前台状态
         guard let allApps = ctrlObj.perform(NSSelectorFromString("allApplications"))?.takeUnretainedValue()

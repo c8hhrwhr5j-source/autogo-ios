@@ -62,4 +62,8 @@ static inline int au_loadstring(lua_State *L, const char *s) {
     return luaL_loadbuffer(L, s, strlen(s), s);
 }
 
+static inline lua_Unsigned au_objlen(lua_State *L, int idx) {
+    return lua_rawlen(L, idx);
+}
+
 #endif /* LuaShim_h */
