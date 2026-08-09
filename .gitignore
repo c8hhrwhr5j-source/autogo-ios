@@ -18,8 +18,8 @@ DerivedData/
 *.dSYM
 
 # xcodegen
-AutoGo.xcodeproj/
-AutoGo.xcworkspace/
+AutoLua.xcodeproj/
+AutoLua.xcworkspace/
 
 # Build
 build/

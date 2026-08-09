@@ -5,10 +5,10 @@ PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="${PROJECT_DIR}/build"
 DERIVED_DATA="${BUILD_DIR}/DerivedData"
 OUTPUT_DIR="${BUILD_DIR}/output"
-SCHEME="AutoGo"
+SCHEME="AutoLua"
 CONFIGURATION="Release"
 
-echo "=== AutoGo iOS Build ==="
+echo "=== AutoLua iOS Build ==="
 
 # Clean
 rm -rf "${BUILD_DIR}"
@@ -27,12 +27,12 @@ fi
 # Build
 echo "[2/4] Building..."
 xcodebuild \
-    -project "${PROJECT_DIR}/AutoGo.xcodeproj" \
+    -project "${PROJECT_DIR}/AutoLua.xcodeproj" \
     -scheme "${SCHEME}" \
     -configuration "${CONFIGURATION}" \
     -derivedDataPath "${DERIVED_DATA}" \
     -destination 'generic/platform=iOS' \
-    -archivePath "${BUILD_DIR}/AutoGo.xcarchive" \
+    -archivePath "${BUILD_DIR}/AutoLua.xcarchive" \
     archive \
     CODE_SIGNING_ALLOWED=NO \
     CODE_SIGNING_REQUIRED=NO \
@@ -41,18 +41,18 @@ xcodebuild \
 
 # Export IPA
 echo "[3/4] Creating IPA..."
-APP_PATH="${BUILD_DIR}/AutoGo.xcarchive/Products/Applications/AutoGo.app"
+APP_PATH="${BUILD_DIR}/AutoLua.xcarchive/Products/Applications/AutoLua.app"
 
 mkdir -p "${OUTPUT_DIR}/Payload"
 cp -R "${APP_PATH}" "${OUTPUT_DIR}/Payload/"
 
 cd "${OUTPUT_DIR}"
-zip -qr "AutoGo.ipa" "Payload"
+zip -qr "AutoLua.ipa" "Payload"
 rm -rf "Payload"
 
 echo "[4/4] Signing with ldid..."
 if command -v ldid &> /dev/null; then
-    ldid -S"${PROJECT_DIR}/AutoGo/Entitlements.entitlements" "${APP_PATH}/AutoGo"
+    ldid -S"${PROJECT_DIR}/AutoLua/Entitlements.entitlements" "${APP_PATH}/AutoLua"
     echo "Signed successfully"
 else
     echo "WARNING: ldid not found. IPA not fakesigned."
@@ -61,4 +61,4 @@ fi
 
 echo ""
 echo "=== Build Complete ==="
-echo "IPA: ${OUTPUT_DIR}/AutoGo.ipa"
+echo "IPA: ${OUTPUT_DIR}/AutoLua.ipa"

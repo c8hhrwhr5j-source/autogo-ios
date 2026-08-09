@@ -1,4 +1,4 @@
-name: Build AutoGo IPA
+name: Build AutoLua IPA
 
 on:
   push:
@@ -28,8 +28,8 @@ jobs:
       - name: Build
         run: |
           xcodebuild build \
-            -project AutoGo.xcodeproj \
-            -scheme AutoGo \
+            -project AutoLua.xcodeproj \
+            -scheme AutoLua \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build/DerivedData \
@@ -45,24 +45,24 @@ jobs:
 
       - name: Sign with ldid
         run: |
-          APP=$(find build/DerivedData/Build/Products/Release-iphoneos -name "AutoGo.app" -type d | head -1)
+          APP=$(find build/DerivedData/Build/Products/Release-iphoneos -name "AutoLua.app" -type d | head -1)
           echo "App: $APP"
           echo "Entitlements:"
-          cat "${GITHUB_WORKSPACE}/AutoGo/Entitlements.entitlements"
-          ldid -S"${GITHUB_WORKSPACE}/AutoGo/Entitlements.entitlements" "$APP/AutoGo"
+          cat "${GITHUB_WORKSPACE}/AutoLua/Entitlements.entitlements"
+          ldid -S"${GITHUB_WORKSPACE}/AutoLua/Entitlements.entitlements" "$APP/AutoLua"
 
       - name: Create IPA
         run: |
-          APP_DIR=$(find build/DerivedData/Build/Products/Release-iphoneos -name "AutoGo.app" -type d | head -1)
+          APP_DIR=$(find build/DerivedData/Build/Products/Release-iphoneos -name "AutoLua.app" -type d | head -1)
           echo "Found app at: $APP_DIR"
           mkdir -p build/output/Payload
           cp -R "$APP_DIR" build/output/Payload/
           cd build/output
-          zip -qr AutoGo.ipa Payload
+          zip -qr AutoLua.ipa Payload
           rm -rf Payload
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AutoGo-iOS-TrollStore
-          path: build/output/AutoGo.ipa
+          name: AutoLua-iOS-TrollStore
+          path: build/output/AutoLua.ipa

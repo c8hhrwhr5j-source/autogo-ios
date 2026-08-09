@@ -1,37 +1,40 @@
-name: AutoGo
+name: AutoLua
 options:
-  bundleIdPrefix: com.autogo
+  bundleIdPrefix: com.autolua
   deploymentTarget:
     iOS: "14.0"
   xcodeVersion: "16.0"
 
 settings:
-  base: AutoGo.xcconfig
+  base: AutoLua.xcconfig
 
 targets:
-  AutoGo:
+  AutoLua:
     type: application
     platform: iOS
     sources:
-      - path: AutoGo/Sources
+      - path: AutoLua/Sources
+      - path: AutoLua/Lua
+      - path: AutoLua
     resources:
-      - path: AutoGo/Resources
+      - path: AutoLua/Resources
     settings:
       base:
-        INFOPLIST_FILE: AutoGo/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: com.autogo.ios
-        CODE_SIGN_ENTITLEMENTS: AutoGo/Entitlements.entitlements
+        INFOPLIST_FILE: AutoLua/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.autolua.ios
+        CODE_SIGN_ENTITLEMENTS: AutoLua/Entitlements.entitlements
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "-"
         PROVISIONING_PROFILE_SPECIFIER: ""
         SWIFT_VERSION: "5.0"
+        GCC_PREPROCESSOR_DEFINITIONS: "AUTOLUA_ENABLE_LUA=1"
+        HEADER_SEARCH_PATHS:
+          - "$(SRCROOT)/AutoLua/Lua"
     dependencies:
-      - sdk: JavaScriptCore.framework
       - sdk: Network.framework
-      - sdk: Vision.framework
       - sdk: UIKit.framework
       - sdk: CoreGraphics.framework
     preBuildScripts:
       - name: "Clean Build"
         script: |
-          echo "Building AutoGo..."
+          echo "Building AutoLua..."
