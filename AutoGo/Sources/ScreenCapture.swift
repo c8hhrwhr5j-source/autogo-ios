@@ -112,6 +112,9 @@ final class ScreenCapture {
         }
     }
 
+    /// 是否正在流式捕获
+    var isStreaming: Bool { captureTimer != nil }
+
     // MARK: - 帧获取 (AutoGo: CaptureScreen → 从回调缓存取)
 
     /// 获取最新缓存帧 (零延迟，直接返回缓存)

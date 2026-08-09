@@ -11,19 +11,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
 
         window = UIWindow(frame: UIScreen.main.bounds)
-        let vc = UIViewController()
-        vc.view.backgroundColor = .black
-
-        let label = UILabel()
-        label.text = "AutoGo"
-        label.textColor = .white
-        label.textAlignment = .center
-        label.font = UIFont.systemFont(ofSize: 24, weight: .bold)
-        label.frame = CGRect(x: 0, y: 0, width: 200, height: 40)
-        label.center = vc.view.center
-        vc.view.addSubview(label)
-
-        window?.rootViewController = vc
+        window?.rootViewController = ScriptViewController()
         window?.makeKeyAndVisible()
 
         setupBackgroundAudio()
