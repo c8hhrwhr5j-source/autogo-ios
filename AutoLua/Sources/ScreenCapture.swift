@@ -1,5 +1,11 @@
 import UIKit
 
+/// 多点找色结果
+struct FindMultiColorResult {
+    let x: Int
+    let y: Int
+}
+
 /// 屏幕截图 —— 通过 Bridge ObjC 层动态加载 IOSurface/IOMobileFramebuffer 私有框架
 final class ScreenCapture {
     static let shared = ScreenCapture()
@@ -26,7 +32,7 @@ final class ScreenCapture {
         guard surface == nil else { return }
 
         // 通过 Bridge ObjC 获取主屏幕 IOSurface（内部会 dlopen 私有框架）
-        guard let surf = AutoLuaGetMainDisplaySurface() else {
+        guard let surf = AutoLuaGetMainDisplaySurface()?.takeUnretainedValue() else {
             LogManager.shared.error("[ScreenCapture] 无法获取屏幕 Surface（可能缺少权限）")
             return
         }
@@ -195,12 +201,12 @@ final class ScreenCapture {
         guard let pixelData = AutoLuaGetPixelData(surf, fullRect) as Data? else { return false }
 
         let pixels = [UInt8](pixelData)
-        let bpr = w * 4  // AutoLuaGetPixelData 输出 4 字节/像素 (BGRA)
+        let bpr = Int(w) * 4  // AutoLuaGetPixelData 输出 4 字节/像素 (BGRA)
 
         frameLock.withLock {
             _cachedPixels = pixels
-            _cachedWidth = w
-            _cachedHeight = h
+            _cachedWidth = Int(w)
+            _cachedHeight = Int(h)
             _cachedBytesPerRow = bpr
             _frameValid = true
         }
