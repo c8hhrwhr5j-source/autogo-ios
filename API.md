@@ -11,7 +11,8 @@
 |---|---|
 | iOS 版本 | >= 14.0 |
 | 脚本语言 | **Lua 5.4** |
-| 脚本存放 | `文件 App → 我的 iPhone → AutoLua/Scripts/` |
+| 脚本存放 | `/var/mobile/AutoLua/Scripts/` |
+| 日志存放 | `/var/mobile/AutoLua/log/` |
 | 文件扩展名 | `.lua` |
 
 ---
@@ -25,7 +26,7 @@
 | 截图 | `captureWait` | 等待新帧后截图 |
 | 截图 | `getScreenSize` | 获取屏幕分辨率 |
 | 取色 | `getPixelColor` | 获取指定坐标颜色 |
-| 找色 | `findColor` | 查找指定颜色 |
+| 取色 | `findColor` | 获取指定坐标像素颜色值 |
 | 找色 | `findColorInRegion` | 在区域内查找颜色 |
 | 找色 | `findMultiColors` | 多点找色（字符串方式） |
 | 找色 | `findMultiColorsEx` | 多点找色（表格方式） |
@@ -41,7 +42,6 @@
 | HUD | `hideHud` | 隐藏浮窗 |
 | HUD | `updateHud` | 更新浮窗文字 |
 | HUD | `toast` | 弹出提示 |
-| OCR | `ocr` | 屏幕文字识别 |
 | 工具 | `sleep` | 延迟等待 |
 
 ---
@@ -103,11 +103,11 @@ end
 
 **参数：** 无
 
-**返回值：** `{width, height}` — 包含宽高的表
+**返回值：** `width, height` — 两个整数，分别表示屏幕宽度和高度
 
 ```lua
-local sz = autolua.getScreenSize()
-print("屏幕: " .. sz.width .. "x" .. sz.height)
+local width, height = autolua.getScreenSize()
+print("屏幕: " .. width .. "x" .. height)
 ```
 
 ---
@@ -124,12 +124,12 @@ print("屏幕: " .. sz.width .. "x" .. sz.height)
 | x | integer | 横坐标 |
 | y | integer | 纵坐标 |
 
-**返回值：** `{r, g, b}` 或 `nil`（坐标无效）
+**返回值：** `r, g, b` — 三个整数 (0-255)，分别为红、绿、蓝分量；坐标无效时返回 `nil, nil, nil`
 
 ```lua
-local col = autolua.getPixelColor(500, 300)
-if col then
-    print(string.format("颜色: R=%d G=%d B=%d", col.r, col.g, col.b))
+local r, g, b = autolua.getPixelColor(500, 300)
+if r then
+    print(string.format("颜色: R=%d G=%d B=%d", r, g, b))
 end
 ```
 
@@ -137,26 +137,27 @@ end
 
 ## 找色
 
-### findColor(r, g, b, tolerance, maxResults)
-在整个屏幕上查找指定颜色。
+### findColor(x, y)
+获取指定坐标像素的十六进制 RGB 颜色值。
 
 **参数：**
 
-| 参数 | 类型 | 说明 | 默认值 |
-|---|---|---|---|
-| r | integer | 红色分量 (0-255) | — |
-| g | integer | 绿色分量 (0-255) | — |
-| b | integer | 蓝色分量 (0-255) | — |
-| tolerance | integer | 容差 (0-255) | 5 |
-| maxResults | integer | 最大返回数量 | 500 |
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| x | integer | 横坐标 |
+| y | integer | 纵坐标 |
 
-**返回值：** `{{x, y}, ...}` — 坐标点数组
+**返回值：** `integer` — 十六进制颜色值（如 `0xFF0000` 表示红色）；坐标无效时返回 `nil`
 
 ```lua
--- 找红色，容差 5，最多返回 100 个
-local pts = autolua.findColor(255, 0, 0, 5, 100)
-for i, pt in ipairs(pts) do
-    print("找到: " .. pt.x .. "," .. pt.y)
+local c = autolua.findColor(100, 100)
+if c then
+    print(string.format("颜色: 0x%06X", c))
+end
+
+-- 判断是否为红色
+if c == 0xFF0000 then
+    autolua.toast("该位置是红色")
 end
 ```
 
@@ -414,28 +415,6 @@ autolua.toast("已保存", 2.0)
 
 ---
 
-## OCR
-
-### ocr()
-对当前截图执行 OCR 文字识别。
-
-**参数：** 无
-
-**返回值：** `string` — 识别出的文字内容
-
-```lua
-autolua.capture()
-local text = autolua.ocr()
-print("识别结果: " .. text)
-
--- 判断是否包含关键词
-if string.find(text, "确认") then
-    autolua.toast("找到确认按钮")
-end
-```
-
----
-
 ## 工具
 
 ### sleep(ms)
@@ -517,20 +496,6 @@ autolua.pinch(200, 300, 150, 50, 800)   -- 缩小
 print("缩放完成")
 ```
 
-### 示例 5：OCR 验证
-
-```lua
--- ocr_verify.lua
-autolua.captureFresh()
-local text = autolua.ocr()
-
-if string.find(text, "成功") then
-    autolua.toast("操作已成功")
-elseif string.find(text, "失败") then
-    autolua.toast("操作失败，重试")
-end
-```
-
 ---
 
 ## TCP 远程控制
@@ -542,7 +507,6 @@ AutoLua 在端口 **9999** 上监听 TCP 连接，可直接从电脑远程执行
 | 命令 | 说明 |
 |---|---|
 | `lua:<code>` | 远程执行 Lua 代码 |
-| `ocr` | 执行 OCR 并返回文字 |
 | `capture` | 截图并返回 JPEG Base64 |
 | `info` | 返回设备信息 |
 | `exit` | 断开连接 |
@@ -571,6 +535,7 @@ s.close()
 ## 目录结构
 
 ```
-AutoLua/Scripts/     ← 放置 .lua 脚本（通过 iTunes/文件 App 访问）
-AutoLua/Logs/        ← 日志目录（autolua_YYYYMMDD.log）
+/var/mobile/AutoLua/
+├── Scripts/          ← .lua 脚本文件
+└── log/              ← 日志文件（autolua_YYYYMMDD.log）
 ```

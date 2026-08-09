@@ -20,7 +20,8 @@ final class ScriptsViewController: UIViewController {
 
     private var scripts: [URL] = []
     private var selectedIndex: IndexPath?
-    private var isRunning = false
+    private var runningScriptURL: URL? = nil
+    private var isRunning: Bool { runningScriptURL != nil }
     private var runQueue = DispatchQueue(label: "autolua.scripts.run")
 
     // MARK: - Lifecycle
@@ -139,7 +140,7 @@ final class ScriptsViewController: UIViewController {
             return
         }
 
-        isRunning = true
+        runningScriptURL = url
         tableView.reloadData()
 
         let name = url.lastPathComponent
@@ -151,7 +152,7 @@ final class ScriptsViewController: UIViewController {
             DispatchQueue.main.async {
                 LogManager.shared.info("脚本 \(name) 执行完成")
                 if !result.isEmpty { LogManager.shared.debug("输出: \(result)") }
-                self.isRunning = false
+                self.runningScriptURL = nil
                 self.tableView.reloadData()
             }
         }
@@ -159,7 +160,7 @@ final class ScriptsViewController: UIViewController {
 
     private func stopScript() {
         guard isRunning else { return }
-        isRunning = false
+        runningScriptURL = nil
         LogManager.shared.info("脚本已手动停止")
         tableView.reloadData()
     }
@@ -209,7 +210,8 @@ extension ScriptsViewController: UITableViewDelegate, UITableViewDataSource {
         let cell = tableView.dequeueReusableCell(withIdentifier: "ScriptCell", for: indexPath) as! ScriptCell
         let url = scripts[indexPath.row]
         let isSelected = (indexPath == selectedIndex)
-        cell.configure(url: url, isSelected: isSelected, isRunning: isRunning)
+        let isThisRunning = (runningScriptURL == url)
+        cell.configure(url: url, isSelected: isSelected, isRunning: isThisRunning)
         return cell
     }
 
@@ -238,6 +240,7 @@ final class ScriptCell: UITableViewCell {
     private let iconLabel = UILabel()
     private let nameLabel = UILabel()
     private let infoLabel = UILabel()
+    private let runningLabel = UILabel()
     private let checkmark = UIImageView()
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -263,6 +266,14 @@ final class ScriptCell: UITableViewCell {
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(nameLabel)
 
+        // 运行中标签
+        runningLabel.text = "运行中"
+        runningLabel.textColor = .systemGreen
+        runningLabel.font = .systemFont(ofSize: 11, weight: .semibold)
+        runningLabel.isHidden = true
+        runningLabel.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(runningLabel)
+
         // 文件信息
         infoLabel.textColor = .systemGray
         infoLabel.font = .systemFont(ofSize: 11)
@@ -283,7 +294,10 @@ final class ScriptCell: UITableViewCell {
 
             nameLabel.leadingAnchor.constraint(equalTo: iconLabel.trailingAnchor, constant: 12),
             nameLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 9),
-            nameLabel.trailingAnchor.constraint(equalTo: checkmark.leadingAnchor, constant: -8),
+            nameLabel.trailingAnchor.constraint(lessThanOrEqualTo: runningLabel.leadingAnchor, constant: -6),
+
+            runningLabel.centerYAnchor.constraint(equalTo: nameLabel.centerYAnchor),
+            runningLabel.trailingAnchor.constraint(equalTo: checkmark.leadingAnchor, constant: -6),
 
             infoLabel.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
             infoLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 2),
@@ -319,15 +333,19 @@ final class ScriptCell: UITableViewCell {
             contentView.layer.borderWidth = 1
             contentView.layer.borderColor = UIColor.systemGreen.cgColor
             checkmark.isHidden = false
+            runningLabel.isHidden = !isRunning
         } else if isRunning {
-            // 运行中 — 轻微高亮
-            contentView.backgroundColor = UIColor.systemGray6
-            contentView.layer.borderWidth = 0
+            // 运行中 — 绿色高亮 + "运行中"标签
+            contentView.backgroundColor = UIColor.systemGreen.withAlphaComponent(0.1)
+            contentView.layer.borderWidth = 1
+            contentView.layer.borderColor = UIColor.systemGreen.withAlphaComponent(0.5).cgColor
             checkmark.isHidden = true
+            runningLabel.isHidden = false
         } else {
             contentView.backgroundColor = .secondarySystemBackground
             contentView.layer.borderWidth = 0
             checkmark.isHidden = true
+            runningLabel.isHidden = true
         }
         contentView.layer.cornerRadius = 8
         contentView.clipsToBounds = true
