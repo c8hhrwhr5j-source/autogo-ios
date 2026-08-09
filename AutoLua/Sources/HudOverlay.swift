@@ -84,7 +84,7 @@ final class HudOverlay {
 
         // 背景视图 (半透明黑底)
         let bg = UIView()
-        bg.backgroundColor = UIColor.black.withAlphaComponent(0.75)
+        bg.backgroundColor = UIColor.systemBackground.withAlphaComponent(0.9)
         bg.layer.cornerRadius = 8
         bg.clipsToBounds = true
 

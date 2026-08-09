@@ -40,7 +40,7 @@ final class SettingsViewController: UIViewController {
     // MARK: - Setup
 
     private func setupUI() {
-        view.backgroundColor = UIColor(white: 0.08, alpha: 1)
+        view.backgroundColor = .systemBackground
 
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.alwaysBounceVertical = true
@@ -71,10 +71,10 @@ final class SettingsViewController: UIViewController {
 
     private func setupInfoCard() {
         // Card container
-        infoCard.backgroundColor = UIColor(white: 0.12, alpha: 1)
+        infoCard.backgroundColor = .secondarySystemBackground
         infoCard.layer.cornerRadius = 12
         infoCard.layer.borderWidth = 1
-        infoCard.layer.borderColor = UIColor.systemGreen.withAlphaComponent(0.2).cgColor
+        infoCard.layer.borderColor = UIColor.separator.cgColor
         contentStack.addArrangedSubview(infoCard)
 
         infoTitle.text = "📱 本机信息"
@@ -83,7 +83,7 @@ final class SettingsViewController: UIViewController {
         infoTitle.translatesAutoresizingMaskIntoConstraints = false
         infoCard.addSubview(infoTitle)
 
-        infoText.textColor = UIColor(white: 0.75, alpha: 1)
+        infoText.textColor = .label
         infoText.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         infoText.numberOfLines = 0
         infoText.translatesAutoresizingMaskIntoConstraints = false
@@ -102,10 +102,10 @@ final class SettingsViewController: UIViewController {
     }
 
     private func setupLogCard() {
-        logCard.backgroundColor = UIColor(white: 0.12, alpha: 1)
+        logCard.backgroundColor = .secondarySystemBackground
         logCard.layer.cornerRadius = 12
         logCard.layer.borderWidth = 1
-        logCard.layer.borderColor = UIColor.systemGreen.withAlphaComponent(0.2).cgColor
+        logCard.layer.borderColor = UIColor.separator.cgColor
         contentStack.addArrangedSubview(logCard)
 
         logTitle.text = "📋 日志"
@@ -136,7 +136,7 @@ final class SettingsViewController: UIViewController {
         logCard.addSubview(filePicker)
 
         // Log text
-        logTextView.backgroundColor = UIColor(white: 0.05, alpha: 1)
+        logTextView.backgroundColor = .systemBackground
         logTextView.textColor = .systemGreen
         logTextView.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
         logTextView.isEditable = false

@@ -40,7 +40,7 @@ final class ScriptsViewController: UIViewController {
     // MARK: - Setup
 
     private func setupUI() {
-        view.backgroundColor = UIColor(white: 0.08, alpha: 1)
+        view.backgroundColor = .systemBackground
 
         // Header
         headerLabel.text = "脚本列表"
@@ -68,7 +68,7 @@ final class ScriptsViewController: UIViewController {
 
         // Empty label
         emptyLabel.text = "暂无脚本文件\n\n将 .lua 文件放入\n文件 App → 我的 iPhone → AutoLua/Scripts"
-        emptyLabel.textColor = UIColor(white: 0.4, alpha: 1)
+        emptyLabel.textColor = .systemGray
         emptyLabel.font = .systemFont(ofSize: 13)
         emptyLabel.numberOfLines = 0
         emptyLabel.textAlignment = .center
@@ -249,7 +249,7 @@ final class ScriptCell: UITableViewCell {
     required init?(coder: NSCoder) { fatalError() }
 
     private func setup() {
-        backgroundColor = UIColor(white: 0.12, alpha: 1)
+        backgroundColor = .secondarySystemBackground
         selectionStyle = .none
 
         // 图标
@@ -259,13 +259,13 @@ final class ScriptCell: UITableViewCell {
         contentView.addSubview(iconLabel)
 
         // 文件名
-        nameLabel.textColor = .white
+        nameLabel.textColor = .label
         nameLabel.font = .systemFont(ofSize: 15, weight: .medium)
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(nameLabel)
 
         // 文件信息
-        infoLabel.textColor = UIColor(white: 0.4, alpha: 1)
+        infoLabel.textColor = .systemGray
         infoLabel.font = .systemFont(ofSize: 11)
         infoLabel.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(infoLabel)
@@ -322,11 +322,11 @@ final class ScriptCell: UITableViewCell {
             checkmark.isHidden = false
         } else if isRunning {
             // 运行中 — 轻微高亮
-            contentView.backgroundColor = UIColor(white: 0.15, alpha: 1)
+            contentView.backgroundColor = UIColor.systemGray6
             contentView.layer.borderWidth = 0
             checkmark.isHidden = true
         } else {
-            contentView.backgroundColor = UIColor(white: 0.12, alpha: 1)
+            contentView.backgroundColor = .secondarySystemBackground
             contentView.layer.borderWidth = 0
             checkmark.isHidden = true
         }

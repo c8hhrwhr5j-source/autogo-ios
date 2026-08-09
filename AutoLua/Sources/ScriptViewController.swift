@@ -27,7 +27,7 @@ final class ScriptViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(white: 0.08, alpha: 1)
+        view.backgroundColor = .systemBackground
         setupContent()
         setupBottomBar()
         switchToTab(0, animated: false)
@@ -51,7 +51,7 @@ final class ScriptViewController: UIViewController {
     // MARK: - Bottom Bar
 
     private func setupBottomBar() {
-        bottomBar.backgroundColor = UIColor(white: 0.12, alpha: 1)
+        bottomBar.backgroundColor = .secondarySystemBackground
         bottomBar.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(bottomBar)
 
@@ -65,7 +65,7 @@ final class ScriptViewController: UIViewController {
 
         // Top border line
         let border = UIView()
-        border.backgroundColor = UIColor(white: 0.2, alpha: 1)
+        border.backgroundColor = UIColor.separator
         border.translatesAutoresizingMaskIntoConstraints = false
         bottomBar.addSubview(border)
         NSLayoutConstraint.activate([
@@ -78,7 +78,7 @@ final class ScriptViewController: UIViewController {
         // Scripts button (left)
         scriptsBtn.setTitle("📜 脚本", for: .normal)
         scriptsBtn.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
-        scriptsBtn.setTitleColor(UIColor(white: 0.5, alpha: 1), for: .normal)
+        scriptsBtn.setTitleColor(.systemGray, for: .normal)
         scriptsBtn.tag = 0
         scriptsBtn.addTarget(self, action: #selector(tabTapped(_:)), for: .touchUpInside)
         scriptsBtn.translatesAutoresizingMaskIntoConstraints = false
@@ -87,7 +87,7 @@ final class ScriptViewController: UIViewController {
         // Settings button (right)
         settingsBtn.setTitle("⚙️ 设置", for: .normal)
         settingsBtn.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
-        settingsBtn.setTitleColor(UIColor(white: 0.5, alpha: 1), for: .normal)
+        settingsBtn.setTitleColor(.systemGray, for: .normal)
         settingsBtn.tag = 1
         settingsBtn.addTarget(self, action: #selector(tabTapped(_:)), for: .touchUpInside)
         settingsBtn.translatesAutoresizingMaskIntoConstraints = false
@@ -140,7 +140,7 @@ final class ScriptViewController: UIViewController {
 
     private func updateTabAppearance() {
         let activeColor = UIColor.systemGreen
-        let inactiveColor = UIColor(white: 0.5, alpha: 1)
+        let inactiveColor = UIColor.systemGray
 
         scriptsBtn.setTitleColor(activeTab == 0 ? activeColor : inactiveColor, for: .normal)
         settingsBtn.setTitleColor(activeTab == 1 ? activeColor : inactiveColor, for: .normal)
